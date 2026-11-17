@@ -42,7 +42,7 @@ dev-mobile:
     pnpm --filter mobile start
 
 gen-openapi:
-    py -3 -m uv run python -m services.api.app.scripts.openapi > openapi.json
+    py -3 -m uv run python -m services.api.app.scripts.openapi
 
 gen-client:
     npx openapi-typescript openapi.json -o packages/api-client/src/schema.d.ts

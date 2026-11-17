@@ -27,6 +27,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     ema50 = calculate_ema(close, 50)
     ema200 = calculate_ema(close, 200)
     ema_ratio_20_50 = ema20 / (ema50 + 1e-10)
+    ema_ratio_50_200 = ema50 / (ema200 + 1e-10)
     macd_line, macd_signal, macd_hist = calculate_macd(close)
 
     # Momentum
@@ -34,7 +35,13 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Volatility
     atr14 = calculate_atr(high, low, close, 14)
+    atr14_norm = atr14 / (close + 1e-10)
     _, _, _, bb_width = calculate_bollinger_bands(close, 20, 2.0)
+
+    # Normalized relative distance to EMAs (stationary representation)
+    norm_dist_ema20 = (close - ema20) / (atr14 + 1e-10)
+    norm_dist_ema50 = (close - ema50) / (atr14 + 1e-10)
+    norm_dist_ema200 = (close - ema200) / (atr14 + 1e-10)
 
     features = pd.DataFrame(
         {
@@ -43,15 +50,16 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
             "logret_6": log_rets["logret_6"],
             "logret_12": log_rets["logret_12"],
             "logret_24": log_rets["logret_24"],
-            "ema_20": ema20,
-            "ema_50": ema50,
-            "ema_200": ema200,
+            "norm_dist_ema20": norm_dist_ema20,
+            "norm_dist_ema50": norm_dist_ema50,
+            "norm_dist_ema200": norm_dist_ema200,
             "ema_ratio_20_50": ema_ratio_20_50,
-            "macd_line": macd_line,
-            "macd_signal": macd_signal,
-            "macd_hist": macd_hist,
+            "ema_ratio_50_200": ema_ratio_50_200,
+            "macd_line": macd_line / (close + 1e-10),
+            "macd_signal": macd_signal / (close + 1e-10),
+            "macd_hist": macd_hist / (close + 1e-10),
             "rsi14": rsi14,
-            "atr14": atr14,
+            "atr14_norm": atr14_norm,
             "bb_width": bb_width,
         },
         index=df.index,

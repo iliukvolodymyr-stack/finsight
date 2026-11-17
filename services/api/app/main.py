@@ -8,6 +8,8 @@ from app.core.errors import (
     app_exception_handler,
     validation_exception_handler,
 )
+from app.infra.db import engine
+from app.infra.redis import close_redis
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +23,8 @@ settings = get_settings()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging(settings.LOG_LEVEL)
     yield
+    await close_redis()
+    await engine.dispose()
 
 
 app = FastAPI(

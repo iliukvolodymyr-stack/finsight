@@ -32,8 +32,8 @@ class BacktestEngine:
         """
         # Align signals to execution at open of next bar
         pos = signals.shift(1).fillna(0)
-        price_returns = (open_prices.shift(-1) - open_prices) / open_prices
-        strategy_returns = pos * price_returns
+        price_returns = ((open_prices.shift(-1) - open_prices) / open_prices).fillna(0.0)
+        strategy_returns = (pos * price_returns).fillna(0.0)
 
         # Deduct transaction costs on position changes
         pos_changes = pos.diff().abs().fillna(0)
@@ -45,8 +45,31 @@ class BacktestEngine:
         mdd = calculate_max_drawdown(equity)
         tot_ret = float(equity.iloc[-1] - 1.0) if len(equity) > 0 else 0.0
 
-        trades_count = int((pos_changes > 0).sum())
-        winning_trades = int((strategy_returns > costs).sum())
+        # Calculate discrete trade-level metrics (round trips)
+        trade_returns: list[float] = []
+        current_trade_return = 1.0
+        in_trade = False
+
+        for r, c, p, p_prev in zip(
+            strategy_returns, costs, pos, pos.shift(1).fillna(0), strict=False
+        ):
+            if p != 0 and p_prev == 0:
+                in_trade = True
+                current_trade_return = 1.0 + r - c
+            elif in_trade:
+                current_trade_return *= 1.0 + r - c
+                if p != p_prev:
+                    trade_returns.append(current_trade_return - 1.0)
+                    if p != 0:
+                        current_trade_return = 1.0
+                    else:
+                        in_trade = False
+
+        if in_trade:
+            trade_returns.append(current_trade_return - 1.0)
+
+        trades_count = len(trade_returns)
+        winning_trades = sum(1 for tr in trade_returns if tr > 0)
         win_rate = winning_trades / trades_count if trades_count > 0 else 0.0
 
         return BacktestResult(

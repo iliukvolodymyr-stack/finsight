@@ -19,8 +19,20 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Enable TimescaleDB extension if available
-    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;")
+    # Enable TimescaleDB extension if available in postgres installation
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            BEGIN
+                CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+            EXCEPTION WHEN OTHERS THEN
+                RAISE NOTICE 'TimescaleDB extension not available, skipping.';
+            END;
+        END
+        $$;
+        """
+    )
 
     # Users table
     op.create_table(

@@ -9,10 +9,17 @@ settings = get_settings()
 
 
 class CurrentUser:
-    def __init__(self, id: str, email: str, role: str = "user"):
+    def __init__(
+        self,
+        id: str,
+        email: str,
+        role: str = "user",
+        display_name: str = "Demo User",
+    ):
         self.id = id
         self.email = email
         self.role = role
+        self.display_name = display_name
 
 
 async def get_current_user(

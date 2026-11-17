@@ -39,10 +39,17 @@ def apply_triple_barrier(
             h = high.iloc[i + step]
             l = low.iloc[i + step]
 
-            if h >= upper_barrier:
+            touch_up = h >= upper_barrier
+            touch_down = l <= lower_barrier
+
+            if touch_up and touch_down:
+                # Conservative: when both barriers touched in same bar, prioritize stop-loss
+                hit = -1
+                break
+            elif touch_up:
                 hit = 1
                 break
-            elif l <= lower_barrier:
+            elif touch_down:
                 hit = -1
                 break
 

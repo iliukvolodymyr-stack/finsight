@@ -26,8 +26,8 @@ def calculate_sortino_ratio(
 ) -> float:
     """Annualized Sortino ratio."""
     excess_returns = returns - (risk_free_rate / periods_per_year)
-    downside = excess_returns[excess_returns < 0]
-    downside_std = downside.std()
-    if downside_std <= 1e-9 or np.isnan(downside_std):
+    negative_returns = np.minimum(0.0, excess_returns)
+    downside_dev = float(np.sqrt(np.mean(negative_returns**2)))
+    if downside_dev <= 1e-9 or np.isnan(downside_dev):
         return 0.0
-    return float((excess_returns.mean() / downside_std) * np.sqrt(periods_per_year))
+    return float((excess_returns.mean() / downside_dev) * np.sqrt(periods_per_year))
