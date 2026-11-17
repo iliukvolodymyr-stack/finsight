@@ -8,16 +8,22 @@ def calculate_ema(series: pd.Series, span: int) -> pd.Series:
 
 
 def calculate_rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    """Relative Strength Index using Wilder's smoothing."""
+    """Relative Strength Index using Wilder's smoothing (scale-invariant, flat -> 50.0)."""
     delta = series.diff()
-    gain = (delta.where(delta > 0, 0.0)).copy()
-    loss = (-delta.where(delta < 0, 0.0)).copy()
+    gain = delta.clip(lower=0.0)
+    loss = (-delta).clip(lower=0.0)
 
     avg_gain = gain.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
 
-    rs = avg_gain / (avg_loss + 1e-10)
-    rsi = 100.0 - (100.0 / (1.0 + rs))
+    denom = avg_gain + avg_loss
+    rsi = pd.Series(np.nan, index=series.index, dtype="float64")
+    valid = denom.notna()
+    zero_denom = valid & (denom == 0.0)
+    nonzero_denom = valid & (denom > 0.0)
+
+    rsi.loc[zero_denom] = 50.0
+    rsi.loc[nonzero_denom] = 100.0 * (avg_gain.loc[nonzero_denom] / denom.loc[nonzero_denom])
     return rsi
 
 

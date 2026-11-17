@@ -31,14 +31,20 @@ class BacktestEngine:
         - Fee + slippage applied on every position change
         """
         # Align signals to execution at open of next bar
-        pos = signals.shift(1).fillna(0)
-        price_returns = ((open_prices.shift(-1) - open_prices) / open_prices).fillna(0.0)
+        pos = signals.shift(1).fillna(0.0).astype(float)
+        next_exit_price = open_prices.astype(float).shift(-1)
+        if len(next_exit_price) > 0:
+            next_exit_price.iloc[-1] = float(close_prices.iloc[-1])
+        price_returns = (
+            (next_exit_price - open_prices.astype(float)) / open_prices.astype(float)
+        ).fillna(0.0)
         strategy_returns = (pos * price_returns).fillna(0.0)
 
         # Deduct transaction costs on position changes
-        pos_changes = pos.diff().abs().fillna(0)
+        pos_prev_series = pos.shift(1).fillna(0.0)
+        pos_changes = (pos - pos_prev_series).abs()
         costs = pos_changes * self.total_cost_pct
-        net_returns = (strategy_returns - costs).fillna(0)
+        net_returns = (strategy_returns - costs).fillna(0.0)
 
         equity = (1.0 + net_returns).cumprod()
         sharpe = calculate_sharpe_ratio(net_returns)
@@ -50,20 +56,35 @@ class BacktestEngine:
         current_trade_return = 1.0
         in_trade = False
 
-        for r, c, p, p_prev in zip(
-            strategy_returns, costs, pos, pos.shift(1).fillna(0), strict=False
-        ):
+        for r, c, p, p_prev in zip(strategy_returns, costs, pos, pos_prev_series, strict=False):
             if p != 0 and p_prev == 0:
+                # Fresh entry from flat
                 in_trade = True
-                current_trade_return = 1.0 + r - c
+                entry_cost = abs(p) * self.total_cost_pct
+                current_trade_return = 1.0 + r - entry_cost
             elif in_trade:
-                current_trade_return *= 1.0 + r - c
-                if p != p_prev:
+                if p == p_prev:
+                    # Holding unchanged position
+                    current_trade_return *= 1.0 + r
+                elif p == 0:
+                    # Exit to flat
+                    exit_cost = abs(p_prev) * self.total_cost_pct
+                    current_trade_return *= 1.0 - exit_cost
                     trade_returns.append(current_trade_return - 1.0)
-                    if p != 0:
-                        current_trade_return = 1.0
-                    else:
-                        in_trade = False
+                    in_trade = False
+                    current_trade_return = 1.0
+                elif (p > 0) != (p_prev > 0):
+                    # Direct reversal (+1 -> -1 or -1 -> +1):
+                    # close old trade at bar open, open new trade with bar return r
+                    exit_cost = abs(p_prev) * self.total_cost_pct
+                    current_trade_return *= 1.0 - exit_cost
+                    trade_returns.append(current_trade_return - 1.0)
+
+                    entry_cost = abs(p) * self.total_cost_pct
+                    current_trade_return = 1.0 + r - entry_cost
+                else:
+                    # Scaling same-side position
+                    current_trade_return *= 1.0 + r - c
 
         if in_trade:
             trade_returns.append(current_trade_return - 1.0)

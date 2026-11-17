@@ -1,6 +1,7 @@
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from finsight_core.config import get_settings
 from finsight_core.schemas import ErrorDetail, ProblemDetails
 
 
@@ -42,7 +43,11 @@ async def app_exception_handler(request: Request, exc: Exception) -> JSONRespons
         code = "INTERNAL_ERROR"
         title = "Internal Server Error"
         status_code = 500
-        detail = str(exc)
+        detail = (
+            str(exc)
+            if get_settings().APP_ENV == "local"
+            else "An unexpected internal error occurred."
+        )
         errors = []
 
     problem = ProblemDetails(

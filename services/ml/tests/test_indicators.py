@@ -21,8 +21,33 @@ def test_calculate_rsi():
     prices = pd.Series([100.0 + i + (i % 2) * 2 for i in range(30)])
     rsi = calculate_rsi(prices, period=14)
     assert len(rsi) == len(prices)
+    # First 14 rows (0..13) have fewer than 14 price differences -> must be NaN
+    assert rsi.iloc[:14].isna().all()
     valid_rsi = rsi.dropna()
     assert (valid_rsi >= 0).all() and (valid_rsi <= 100).all()
+
+
+def test_calculate_rsi_flat_extremes_and_scale_invariance():
+    # Completely flat prices -> neutral RSI = 50.0 (not 0.0)
+    flat = pd.Series([100.0] * 30)
+    rsi_flat = calculate_rsi(flat, period=14).dropna()
+    assert len(rsi_flat) == 16
+    assert np.allclose(rsi_flat, 50.0)
+
+    # Strictly rising -> 100.0; strictly falling -> 0.0
+    rising = pd.Series(np.linspace(100.0, 130.0, 30))
+    falling = pd.Series(np.linspace(130.0, 100.0, 30))
+    assert np.allclose(calculate_rsi(rising, period=14).dropna(), 100.0)
+    assert np.allclose(calculate_rsi(falling, period=14).dropna(), 0.0)
+
+    # Scale invariance for low-priced assets (e.g. $0.0001 tokens)
+    base = pd.Series([100.0 + ((-1) ** i) * (i % 5) for i in range(30)])
+    tiny = base * 1e-6
+    assert np.allclose(
+        calculate_rsi(base, period=14).dropna(),
+        calculate_rsi(tiny, period=14).dropna(),
+        atol=1e-9,
+    )
 
 
 def test_calculate_macd():

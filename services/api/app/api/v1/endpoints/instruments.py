@@ -29,6 +29,75 @@ class QuoteResponse(BaseModel):
     stale: bool = False
 
 
+_MOCK_INSTRUMENTS: list[InstrumentResponse] = [
+    InstrumentResponse(
+        id="7f0c0000-0000-7000-8000-000000000001",
+        symbol="BTCUSDT",
+        name="Bitcoin",
+        asset_class="crypto",
+        exchange="binance",
+        quote_currency="USDT",
+        is_active=True,
+        metadata={"sector": "layer1"},
+    ),
+    InstrumentResponse(
+        id="7f0c0000-0000-7000-8000-000000000002",
+        symbol="ETHUSDT",
+        name="Ethereum",
+        asset_class="crypto",
+        exchange="binance",
+        quote_currency="USDT",
+        is_active=True,
+        metadata={"sector": "smart_contracts"},
+    ),
+    InstrumentResponse(
+        id="7f0c0000-0000-7000-8000-000000000003",
+        symbol="SPY",
+        name="SPDR S&P 500 ETF Trust",
+        asset_class="etf",
+        exchange="nyse",
+        quote_currency="USD",
+        is_active=True,
+        metadata={"sector": "index"},
+    ),
+]
+
+_MOCK_QUOTES: dict[str, QuoteResponse] = {
+    "BTCUSDT": QuoteResponse(
+        symbol="BTCUSDT",
+        price=91372.0,
+        change_24h=1.84,
+        volume_24h=28114.2,
+        ts="2026-11-17T14:00:00Z",
+        stale=False,
+    ),
+    "ETHUSDT": QuoteResponse(
+        symbol="ETHUSDT",
+        price=3145.5,
+        change_24h=2.12,
+        volume_24h=185420.0,
+        ts="2026-11-17T14:00:00Z",
+        stale=False,
+    ),
+    "SPY": QuoteResponse(
+        symbol="SPY",
+        price=594.2,
+        change_24h=0.45,
+        volume_24h=42500000.0,
+        ts="2026-11-17T14:00:00Z",
+        stale=False,
+    ),
+}
+
+
+def _find_instrument(id_or_symbol: str) -> InstrumentResponse:
+    needle = id_or_symbol.lower()
+    for inst in _MOCK_INSTRUMENTS:
+        if inst.id.lower() == needle or inst.symbol.lower() == needle:
+            return inst
+    raise NotFoundException(f"Instrument {id_or_symbol} not found")
+
+
 @router.get("", response_model=list[InstrumentResponse])
 async def list_instruments(
     asset_class: str | None = Query(None),
@@ -36,63 +105,24 @@ async def list_instruments(
     is_active: bool = Query(True),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[InstrumentResponse]:
-    # In Sprint C0 skeleton, return default mock/db instruments
-    return [
-        InstrumentResponse(
-            id="7f0c0000-0000-7000-8000-000000000001",
-            symbol="BTCUSDT",
-            name="Bitcoin",
-            asset_class="crypto",
-            exchange="binance",
-            quote_currency="USDT",
-            is_active=True,
-            metadata={"sector": "layer1"},
-        ),
-        InstrumentResponse(
-            id="7f0c0000-0000-7000-8000-000000000002",
-            symbol="ETHUSDT",
-            name="Ethereum",
-            asset_class="crypto",
-            exchange="binance",
-            quote_currency="USDT",
-            is_active=True,
-            metadata={"sector": "smart_contracts"},
-        ),
-        InstrumentResponse(
-            id="7f0c0000-0000-7000-8000-000000000003",
-            symbol="SPY",
-            name="SPDR S&P 500 ETF Trust",
-            asset_class="etf",
-            exchange="nyse",
-            quote_currency="USD",
-            is_active=True,
-            metadata={"sector": "index"},
-        ),
-    ]
+    # In Sprint C0 skeleton, filter default mock instruments
+    items = [inst for inst in _MOCK_INSTRUMENTS if inst.is_active == is_active]
+    if asset_class:
+        items = [inst for inst in items if inst.asset_class.lower() == asset_class.lower()]
+    if q:
+        needle = q.lower()
+        items = [
+            inst for inst in items if needle in inst.symbol.lower() or needle in inst.name.lower()
+        ]
+    return items
 
 
 @router.get("/{id}", response_model=InstrumentResponse)
 async def get_instrument(id: str) -> InstrumentResponse:
-    if id == "7f0c0000-0000-7000-8000-000000000001" or id == "BTCUSDT":
-        return InstrumentResponse(
-            id="7f0c0000-0000-7000-8000-000000000001",
-            symbol="BTCUSDT",
-            name="Bitcoin",
-            asset_class="crypto",
-            exchange="binance",
-            quote_currency="USDT",
-            is_active=True,
-        )
-    raise NotFoundException(f"Instrument {id} not found")
+    return _find_instrument(id)
 
 
 @router.get("/{id}/quote", response_model=QuoteResponse)
 async def get_quote(id: str) -> QuoteResponse:
-    return QuoteResponse(
-        symbol="BTCUSDT",
-        price=91372.0,
-        change_24h=1.84,
-        volume_24h=28114.2,
-        ts="2026-11-17T14:00:00Z",
-        stale=False,
-    )
+    inst = _find_instrument(id)
+    return _MOCK_QUOTES[inst.symbol]

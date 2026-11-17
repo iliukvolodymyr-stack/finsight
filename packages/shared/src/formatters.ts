@@ -7,11 +7,12 @@ export function formatCurrency(
   currency = 'USD',
   locale = 'uk-UA'
 ): string {
+  const absVal = Math.abs(value);
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: value < 1 ? 4 : 2,
+    maximumFractionDigits: absVal > 0 && absVal < 1 ? 4 : 2,
   }).format(value);
 }
 

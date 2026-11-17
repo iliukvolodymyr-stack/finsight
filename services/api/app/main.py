@@ -47,6 +47,7 @@ app.add_middleware(
 
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, app_exception_handler)
 
 app.include_router(health_router)
 app.include_router(api_v1_router)
