@@ -24,13 +24,14 @@ features:
   - logret_6
   - logret_12
   - logret_24
-  - ema_20
-  - ema_50
-  - ema_200
+  - norm_dist_ema20
+  - norm_dist_ema50
+  - norm_dist_ema200
   - ema_ratio_20_50
+  - ema_ratio_50_200
   - macd_line
   - macd_signal
   - macd_hist
   - rsi14
-  - atr14
+  - atr14_norm
   - bb_width

@@ -24,48 +24,51 @@ async def seed() -> None:
 
     instruments = data.get("instruments", [])
 
-    async with AsyncSessionLocal() as session:
-        # 1. Seed demo user for AUTH_MODE=single_user
-        demo_user_id = uuid.UUID("00000000-0000-7000-8000-000000000001")
-        user_res = await session.execute(select(UserModel).where(UserModel.id == demo_user_id))
-        user = user_res.scalar_one_or_none()
-        if not user:
-            user = UserModel(
-                id=demo_user_id,
-                email="demo@finsight.local",
-                password_hash="mock_argon2_hash",
-                display_name="Demo User",
-                role="admin",
-                is_active=True,
-            )
-            session.add(user)
-            logger.info("Added default demo user.")
-
-        # 2. Seed instruments
-        for item in instruments:
-            sym = item["symbol"]
-            inst_res = await session.execute(
-                select(InstrumentModel).where(InstrumentModel.symbol == sym)
-            )
-            inst = inst_res.scalar_one_or_none()
-            if not inst:
-                inst = InstrumentModel(
-                    id=uuid.uuid7(),
-                    symbol=sym,
-                    name=item["name"],
-                    asset_class=item["asset_class"],
-                    exchange=item["exchange"],
-                    quote_currency=item.get("quote_currency", "USDT"),
-                    tick_size=item.get("tick_size"),
-                    lot_size=item.get("lot_size"),
-                    is_active=item.get("is_active", True),
-                    metadata_=item.get("metadata", {}),
+    try:
+        async with AsyncSessionLocal() as session:
+            # 1. Seed demo user for AUTH_MODE=single_user
+            demo_user_id = uuid.UUID("00000000-0000-7000-8000-000000000001")
+            user_res = await session.execute(select(UserModel).where(UserModel.id == demo_user_id))
+            user = user_res.scalar_one_or_none()
+            if not user:
+                user = UserModel(
+                    id=demo_user_id,
+                    email="demo@finsight.local",
+                    password_hash="mock_argon2_hash",
+                    display_name="Demo User",
+                    role="admin",
+                    is_active=True,
                 )
-                session.add(inst)
-                logger.info("Added instrument: {}", sym)
+                session.add(user)
+                logger.info("Added default demo user.")
 
-        await session.commit()
-    logger.info("Seeding complete.")
+            # 2. Seed instruments
+            for item in instruments:
+                sym = item["symbol"]
+                inst_res = await session.execute(
+                    select(InstrumentModel).where(InstrumentModel.symbol == sym)
+                )
+                inst = inst_res.scalar_one_or_none()
+                if not inst:
+                    inst = InstrumentModel(
+                        id=uuid.uuid7(),
+                        symbol=sym,
+                        name=item["name"],
+                        asset_class=item["asset_class"],
+                        exchange=item["exchange"],
+                        quote_currency=item.get("quote_currency", "USDT"),
+                        tick_size=item.get("tick_size"),
+                        lot_size=item.get("lot_size"),
+                        is_active=item.get("is_active", True),
+                        metadata_=item.get("metadata", {}),
+                    )
+                    session.add(inst)
+                    logger.info("Added instrument: {}", sym)
+
+            await session.commit()
+        logger.info("Seeding complete.")
+    except Exception as exc:
+        logger.warning("Could not seed database (is PostgreSQL container running?): {}", exc)
 
 
 if __name__ == "__main__":
