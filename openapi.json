@@ -1,0 +1,1739 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinSight AI API",
+    "description": "Intelligent financial asset analytics, risk assessment, and forecasting API",
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Readiness Check",
+        "operationId": "readiness_check_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_v1_auth_me_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/ws-ticket": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get Ws Ticket",
+        "operationId": "get_ws_ticket_api_v1_auth_ws_ticket_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WsTicketResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instruments": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "List Instruments",
+        "operationId": "list_instruments_api_v1_instruments_get",
+        "parameters": [
+          {
+            "name": "asset_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Asset Class"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Is Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstrumentResponse"
+                  },
+                  "title": "Response List Instruments Api V1 Instruments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Get Instrument",
+        "operationId": "get_instrument_api_v1_instruments__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstrumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}/quote": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Get Quote",
+        "operationId": "get_quote_api_v1_instruments__id__quote_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}/candles": {
+      "get": {
+        "tags": [
+          "Candles & Indicators"
+        ],
+        "summary": "Get Candles",
+        "operationId": "get_candles_api_v1_instruments__id__candles_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(1m|15m|1h|4h|1d)$",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 1000,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandleListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instruments/{id}/indicators": {
+      "get": {
+        "tags": [
+          "Candles & Indicators"
+        ],
+        "summary": "Get Indicators",
+        "operationId": "get_indicators_api_v1_instruments__id__indicators_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(1m|15m|1h|4h|1d)$",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndicatorsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "List Predictions",
+        "operationId": "list_predictions_api_v1_predictions_get",
+        "parameters": [
+          {
+            "name": "instrument_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument Ids"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "latest",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Latest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PredictionResponse"
+                  },
+                  "title": "Response List Predictions Api V1 Predictions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/{id}": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Get Prediction",
+        "operationId": "get_prediction_api_v1_predictions__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "List Portfolios",
+        "operationId": "list_portfolios_api_v1_portfolios_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortfolioResponse"
+                  },
+                  "title": "Response List Portfolios Api V1 Portfolios Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Create Portfolio",
+        "operationId": "create_portfolio_api_v1_portfolios_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePortfolioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/risk": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Get Portfolio Risk",
+        "operationId": "get_portfolio_risk_api_v1_portfolios__id__risk_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskSnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests": {
+      "post": {
+        "tags": [
+          "Backtests"
+        ],
+        "summary": "Create Backtest",
+        "operationId": "create_backtest_api_v1_backtests_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBacktestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateBacktestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "summary": "List Backtests",
+        "operationId": "list_backtests_api_v1_backtests_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestSummaryResponse"
+                  },
+                  "title": "Response List Backtests Api V1 Backtests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          },
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "AuthResponse"
+      },
+      "BacktestSummaryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          },
+          "max_drawdown": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Drawdown"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          },
+          "trades_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trades Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "BacktestSummaryResponse"
+      },
+      "CandleItem": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T"
+          },
+          "o": {
+            "type": "number",
+            "title": "O"
+          },
+          "h": {
+            "type": "number",
+            "title": "H"
+          },
+          "l": {
+            "type": "number",
+            "title": "L"
+          },
+          "c": {
+            "type": "number",
+            "title": "C"
+          },
+          "v": {
+            "type": "number",
+            "title": "V"
+          },
+          "closed": {
+            "type": "boolean",
+            "title": "Closed",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "o",
+          "h",
+          "l",
+          "c",
+          "v"
+        ],
+        "title": "CandleItem"
+      },
+      "CandleListResponse": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandleItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "timeframe",
+          "items"
+        ],
+        "title": "CandleListResponse"
+      },
+      "CreateBacktestRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "instrument_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Instrument Ids"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe",
+            "default": "1h"
+          },
+          "period": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Period"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "walk_forward_retrain"
+          },
+          "strategy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Strategy"
+          },
+          "costs": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Costs",
+            "default": {
+              "fee_bps": 10.0,
+              "slippage_bps": 5.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "instrument_ids",
+          "period",
+          "strategy"
+        ],
+        "title": "CreateBacktestRequest"
+      },
+      "CreateBacktestResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "estimated_seconds": {
+            "type": "integer",
+            "title": "Estimated Seconds",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "CreateBacktestResponse"
+      },
+      "CreatePortfolioRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreatePortfolioRequest"
+      },
+      "ExplanationItem": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "contribution"
+        ],
+        "title": "ExplanationItem"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          }
+        },
+        "type": "object",
+        "title": "HealthResponse"
+      },
+      "IndicatorsResponse": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "timeframe",
+          "items"
+        ],
+        "title": "IndicatorsResponse"
+      },
+      "InstrumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class"
+          },
+          "exchange": {
+            "type": "string",
+            "title": "Exchange"
+          },
+          "quote_currency": {
+            "type": "string",
+            "title": "Quote Currency"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "symbol",
+          "name",
+          "asset_class",
+          "exchange",
+          "quote_currency",
+          "is_active"
+        ],
+        "title": "InstrumentResponse"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "ModelInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": "meta_ensemble"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "1.0.0"
+          }
+        },
+        "type": "object",
+        "title": "ModelInfo"
+      },
+      "PortfolioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "default": "USD"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "title": "PortfolioResponse"
+      },
+      "PredictionResponse": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "horizon_bars": {
+            "type": "integer",
+            "title": "Horizon Bars"
+          },
+          "signal": {
+            "type": "string",
+            "title": "Signal"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probabilities"
+          },
+          "price_range": {
+            "$ref": "#/components/schemas/PriceRange"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelInfo"
+          },
+          "regime": {
+            "type": "string",
+            "title": "Regime",
+            "default": "bull"
+          },
+          "explanation": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationItem"
+            },
+            "type": "array",
+            "title": "Explanation",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "timeframe",
+          "as_of",
+          "horizon_bars",
+          "signal",
+          "confidence",
+          "probabilities",
+          "price_range",
+          "model"
+        ],
+        "title": "PredictionResponse"
+      },
+      "PriceRange": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "coverage": {
+            "type": "number",
+            "title": "Coverage",
+            "default": 0.8
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "PriceRange"
+      },
+      "QuoteResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "change_24h": {
+            "type": "number",
+            "title": "Change 24H"
+          },
+          "volume_24h": {
+            "type": "number",
+            "title": "Volume 24H"
+          },
+          "ts": {
+            "type": "string",
+            "title": "Ts"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "price",
+          "change_24h",
+          "volume_24h",
+          "ts"
+        ],
+        "title": "QuoteResponse"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "redis": {
+            "type": "string",
+            "title": "Redis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "redis"
+        ],
+        "title": "ReadyResponse"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "display_name"
+        ],
+        "title": "RegisterRequest"
+      },
+      "RiskSnapshotResponse": {
+        "properties": {
+          "var_95": {
+            "type": "number",
+            "title": "Var 95"
+          },
+          "cvar_95": {
+            "type": "number",
+            "title": "Cvar 95"
+          },
+          "sharpe": {
+            "type": "number",
+            "title": "Sharpe"
+          },
+          "sortino": {
+            "type": "number",
+            "title": "Sortino"
+          },
+          "max_drawdown": {
+            "type": "number",
+            "title": "Max Drawdown"
+          },
+          "annual_volatility": {
+            "type": "number",
+            "title": "Annual Volatility"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "var_95",
+          "cvar_95",
+          "sharpe",
+          "sortino",
+          "max_drawdown",
+          "annual_volatility",
+          "risk_level"
+        ],
+        "title": "RiskSnapshotResponse"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "user"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "display_name"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WsTicketResponse": {
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "title": "Ticket"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket"
+        ],
+        "title": "WsTicketResponse"
+      }
+    }
+  }
+}

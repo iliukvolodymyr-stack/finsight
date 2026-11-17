@@ -1,0 +1,68 @@
+instruments:
+  # Coursework primary active assets
+  - symbol: BTCUSDT
+    name: Bitcoin
+    asset_class: crypto
+    exchange: binance
+    quote_currency: USDT
+    is_active: true
+    tick_size: 0.1
+    lot_size: 0.00001
+    metadata:
+      sector: layer1
+      aliases:
+        binance: BTCUSDT
+        yahoo: BTC-USD
+
+  - symbol: ETHUSDT
+    name: Ethereum
+    asset_class: crypto
+    exchange: binance
+    quote_currency: USDT
+    is_active: true
+    tick_size: 0.01
+    lot_size: 0.0001
+    metadata:
+      sector: smart_contracts
+      aliases:
+        binance: ETHUSDT
+        yahoo: ETH-USD
+
+  - symbol: SPY
+    name: SPDR S&P 500 ETF Trust
+    asset_class: etf
+    exchange: nyse
+    quote_currency: USD
+    is_active: true
+    tick_size: 0.01
+    lot_size: 1.0
+    metadata:
+      sector: index
+      aliases:
+        yahoo: SPY
+
+  # Expanded Diploma Universe (is_active: false for C0)
+  - symbol: SOLUSDT
+    name: Solana
+    asset_class: crypto
+    exchange: binance
+    quote_currency: USDT
+    is_active: false
+  - symbol: BNBUSDT
+    name: BNB
+    asset_class: crypto
+    exchange: binance
+    quote_currency: USDT
+    is_active: false
+  - symbol: AAPL
+    name: Apple Inc.
+    asset_class: stock
+    exchange: nasdaq
+    quote_currency: USD
+    is_active: false
+  - symbol: NVDA
+    name: NVIDIA Corporation
+    asset_class: stock
+    exchange: nasdaq
+    quote_currency: USD
+    is_active: false

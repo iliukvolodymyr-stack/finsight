@@ -1,0 +1,18 @@
+[project]
+name = "finsight-core"
+version = "0.1.0"
+description = "FinSight AI shared core library"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "loguru>=0.7.3",
+    "uuid-utils>=0.10.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finsight_core"]

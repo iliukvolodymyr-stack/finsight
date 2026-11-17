@@ -1,0 +1,48 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.router import api_v1_router
+from app.core.errors import (
+    AppException,
+    app_exception_handler,
+    validation_exception_handler,
+)
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from finsight_core.config import get_settings
+from finsight_core.logging import setup_logging
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    setup_logging(settings.LOG_LEVEL)
+    yield
+
+
+app = FastAPI(
+    title="FinSight AI API",
+    version="1.1.0",
+    description="Intelligent financial asset analytics, risk assessment, and forecasting API",
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+app.include_router(health_router)
+app.include_router(api_v1_router)

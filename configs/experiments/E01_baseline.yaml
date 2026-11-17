@@ -1,0 +1,25 @@
+experiment_id: E01
+name: "Baseline Models (Buy&Hold, EMA Crossover, Random vs LightGBM)"
+symbol: BTCUSDT
+timeframe: 1h
+period:
+  train_from: "2024-01-01"
+  train_to: "2025-06-01"
+  test_from: "2025-06-01"
+  test_to: "2026-06-01"
+
+validation:
+  scheme: walk_forward
+  train_months: 12
+  test_months: 2
+  embargo_bars: 24
+
+costs:
+  fee_bps: 10.0
+  slippage_bps: 5.0
+
+metrics:
+  - sharpe
+  - max_drawdown
+  - win_rate
+  - total_return
