@@ -28,7 +28,11 @@ def include_object(object, name, type_, reflected, compare_to):
         or getattr(object, "schema", None) in ("_timescaledb_internal", "_timescaledb_catalog")
     ):
         return False
-    return not (type_ == "index" and name and name.startswith("_timescaledb_"))
+    return not (
+        type_ == "index"
+        and name
+        and (name.startswith("_timescaledb_") or name == "candles_open_time_idx")
+    )
 
 
 def run_migrations_offline() -> None:

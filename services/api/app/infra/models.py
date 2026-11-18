@@ -29,9 +29,10 @@ def new_uuid7() -> uuid.UUID:
 
 class UserModel(Base):
     __tablename__ = "users"
+    __table_args__ = (Index("idx_users_email", "email"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid7)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
@@ -52,11 +53,15 @@ class UserModel(Base):
 
 class InstrumentModel(Base):
     __tablename__ = "instruments"
+    __table_args__ = (
+        Index("idx_instruments_symbol", "symbol"),
+        Index("idx_instruments_asset_class", "asset_class"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid7)
-    symbol: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
+    symbol: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    asset_class: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    asset_class: Mapped[str] = mapped_column(String(20), nullable=False)
     exchange: Mapped[str] = mapped_column(String(30), nullable=False)
     quote_currency: Mapped[str] = mapped_column(String(10), default="USDT", nullable=False)
     tick_size: Mapped[float | None] = mapped_column(Numeric(28, 10), nullable=True)
@@ -187,6 +192,7 @@ class NewsArticleModel(Base):
             "availability_basis IN ('live','backfill_published_proxy')",
             name="ck_news_articles_availability_basis",
         ),
+        Index("idx_news_articles_content_hash", "content_hash"),
         Index("idx_news_articles_published_at", "published_at"),
         Index("idx_news_articles_available_at", "available_at"),
         Index("idx_news_articles_dedup_cluster", "dedup_cluster_id"),
@@ -200,7 +206,7 @@ class NewsArticleModel(Base):
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     url_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     body: Mapped[str] = mapped_column(Text, default="", nullable=False)
     language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
