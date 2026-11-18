@@ -1,37 +1,38 @@
-name: lgbm_btc_1h
+name: lgbm_core
 version: 0.1.0
-model_type: lightgbm
+task: direction_3class
+algo: lightgbm
 symbol: BTCUSDT
 timeframe: 1h
 horizon_bars: 24
+status_target: production
+feature_set: core_market_v1
 
+# Barrier multiplier k=1.0 fixed BEFORE experiments strictly by train-only class balance:
+# BTCUSDT 1h 12m train -> BUY 28.3%, HOLD 40.5%, SELL 31.2% (vs k=2.0 -> HOLD 80.8%).
 labeling:
   method: triple_barrier
-  pt_mult: 2.0
-  sl_mult: 2.0
+  pt_mult: 1.0
+  sl_mult: 1.0
   horizon_bars: 24
+  min_barrier_pct: 0.003
+  entry_on_next_open: true
+
+validation:
+  scheme: purged_walk_forward
+  min_train_months: 12
+  val_months: 2
+  test_months: 2
+  embargo_bars: 24
 
 hyperparameters:
-  n_estimators: 150
-  learning_rate: 0.05
+  n_estimators: 300
+  learning_rate: 0.03
   max_depth: 5
   num_leaves: 31
+  min_child_samples: 40
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.1
+  reg_lambda: 1.0
   random_state: 42
-
-features:
-  - logret_1
-  - logret_3
-  - logret_6
-  - logret_12
-  - logret_24
-  - norm_dist_ema20
-  - norm_dist_ema50
-  - norm_dist_ema200
-  - ema_ratio_20_50
-  - ema_ratio_50_200
-  - macd_line
-  - macd_signal
-  - macd_hist
-  - rsi14
-  - atr14_norm
-  - bb_width

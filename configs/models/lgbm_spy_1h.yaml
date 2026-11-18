@@ -1,0 +1,40 @@
+name: lgbm_core
+version: 0.1.0
+task: direction_3class
+algo: lightgbm
+symbol: SPY
+timeframe: 1h
+horizon_bars: 24
+# Experimental candidate only: ~3,430 1h bars total (~1,734 in 12m train), low statistical power,
+# and H=24 covers ~3.4 NYSE sessions with overnight gaps.
+status_target: candidate
+feature_set: core_market_v1
+
+# Barrier multiplier k=1.0 fixed BEFORE experiments strictly by train-only class balance:
+# SPY 1h 12m train -> BUY 27.5%, HOLD 38.2%, SELL 34.3% (vs k=2.0 -> HOLD 84.0%).
+labeling:
+  method: triple_barrier
+  pt_mult: 1.0
+  sl_mult: 1.0
+  horizon_bars: 24
+  min_barrier_pct: 0.003
+  entry_on_next_open: true
+
+validation:
+  scheme: purged_walk_forward
+  min_train_months: 12
+  val_months: 2
+  test_months: 2
+  embargo_bars: 24
+
+hyperparameters:
+  n_estimators: 250
+  learning_rate: 0.03
+  max_depth: 4
+  num_leaves: 15
+  min_child_samples: 30
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.5
+  reg_lambda: 2.0
+  random_state: 42
