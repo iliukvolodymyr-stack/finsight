@@ -1,9 +1,13 @@
 from datetime import UTC, datetime
 
+import httpx
+import pytest
 from finsight_ml.data import (
     RawCandle,
     detect_gaps,
     expected_bar_times,
+    fetch_binance_klines,
+    fetch_yahoo_candles,
     is_quote_stale,
     parse_binance_klines,
     parse_yahoo_chart,
@@ -179,13 +183,30 @@ def test_gap_detector_crypto_24_7():
 
 def test_is_quote_stale_respects_spy_weekends_and_holidays():
     # Friday Nov 21, 2025 last 1h bar at 20:30 UTC (15:30 ET)
+    friday_open = datetime(2025, 11, 21, 14, 30, 0, tzinfo=UTC)
     friday_last = datetime(2025, 11, 21, 20, 30, 0, tzinfo=UTC)
     sunday_noon = datetime(2025, 11, 23, 12, 0, 0, tzinfo=UTC)
 
-    # SPY on Sunday with Friday's bar -> NOT stale
-    assert is_quote_stale("nyse", friday_last, sunday_noon) is False
+    # SPY on Sunday with Friday's closing 1h bar -> NOT stale
+    assert is_quote_stale("nyse", friday_last, sunday_noon, timeframe="1h") is False
+    # SPY on Sunday with only Friday's 14:30 morning bar (missed 6 hours!) -> STALE for 1h
+    assert is_quote_stale("nyse", friday_open, sunday_noon, timeframe="1h") is True
+    # But for 1d timeframe, Friday 14:30 UTC IS the valid daily bar -> NOT stale
+    assert is_quote_stale("nyse", friday_open, sunday_noon, timeframe="1d") is False
     # Crypto on Sunday with Friday's bar -> STALE
     assert is_quote_stale("binance", friday_last, sunday_noon) is True
+
+    # Black Friday half-day (Nov 28, 2025: 14:30 - 18:00 UTC, last 1h bar = 17:30 UTC)
+    bf_last = datetime(2025, 11, 28, 17, 30, 0, tzinfo=UTC)
+    bf_early = datetime(2025, 11, 28, 15, 30, 0, tzinfo=UTC)
+    sat_noon = datetime(2025, 11, 29, 12, 0, 0, tzinfo=UTC)
+    assert is_quote_stale("nyse", bf_last, sat_noon, timeframe="1h") is False
+    assert is_quote_stale("nyse", bf_early, sat_noon, timeframe="1h") is True
+
+    # Post-close grace window (21:05 UTC = 5 min after close vs 21:20 UTC = 20 min after)
+    fri_1930 = datetime(2025, 11, 21, 19, 30, 0, tzinfo=UTC)
+    assert is_quote_stale("nyse", fri_1930, datetime(2025, 11, 21, 21, 5, 0, tzinfo=UTC)) is False
+    assert is_quote_stale("nyse", fri_1930, datetime(2025, 11, 21, 21, 20, 0, tzinfo=UTC)) is True
 
     # Thanksgiving Thursday Nov 27, 2025 with Wednesday's bar -> NOT stale
     wed_last = datetime(2025, 11, 26, 20, 30, 0, tzinfo=UTC)
@@ -195,3 +216,31 @@ def test_is_quote_stale_respects_spy_weekends_and_holidays():
     # Missing Friday's session completely when checked on Sunday -> STALE
     thursday_last = datetime(2025, 11, 20, 20, 30, 0, tzinfo=UTC)
     assert is_quote_stale("nyse", thursday_last, sunday_noon) is True
+
+
+@pytest.mark.asyncio
+async def test_adapters_raise_on_exhausted_retries_and_retry_transport_errors():
+    start = datetime(2026, 11, 17, 0, 0, 0, tzinfo=UTC)
+    end = datetime(2026, 11, 17, 2, 0, 0, tzinfo=UTC)
+
+    # 1. Persistent 503 must raise HTTPStatusError instead of returning empty []
+    always_503 = httpx.MockTransport(lambda req: httpx.Response(503, headers={"Retry-After": "0"}))
+    async with httpx.AsyncClient(transport=always_503) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await fetch_binance_klines("BTCUSDT", "1h", start, end, max_retries=2, client=client)
+        with pytest.raises(httpx.HTTPStatusError):
+            await fetch_yahoo_candles("SPY", "1h", start, end, max_retries=2, client=client)
+
+    # 2. Transient TransportError on attempt 1 succeeds on attempt 2
+    calls = {"n": 0}
+
+    def flaky_handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx.ConnectError("transient network error", request=req)
+        return httpx.Response(200, json=[])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(flaky_handler)) as client:
+        res = await fetch_binance_klines("BTCUSDT", "1h", start, end, max_retries=2, client=client)
+        assert res == []
+        assert calls["n"] == 2

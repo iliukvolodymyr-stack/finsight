@@ -13,7 +13,7 @@ from finsight_ml.data import (
     validate_candles,
 )
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -124,29 +124,36 @@ async def refresh_data_gaps(
     report = detect_gaps(observed, exchange=instrument.exchange, timeframe=timeframe)
 
     now_utc = datetime.now(UTC)
-    # Mark previously open gaps resolved, then record current gaps
-    await session.execute(
-        update(DataGapModel)
-        .where(
+    open_gaps_res = await session.execute(
+        select(DataGapModel).where(
             DataGapModel.instrument_id == instrument.id,
             DataGapModel.timeframe == timeframe,
             DataGapModel.resolved_at.is_(None),
         )
-        .values(resolved_at=now_utc)
     )
+    existing_open = list(open_gaps_res.scalars().all())
+    existing_by_key = {(g.gap_start, g.gap_end, g.bars_missing): g for g in existing_open}
+    current_keys = {(g.gap_start, g.gap_end, g.bars_missing) for g in report.gaps}
+
+    # Resolve only gaps that are actually filled; preserve unchanged open gaps
+    for key, row in existing_by_key.items():
+        if key not in current_keys:
+            row.resolved_at = now_utc
 
     for g in report.gaps:
-        session.add(
-            DataGapModel(
-                instrument_id=instrument.id,
-                timeframe=timeframe,
-                gap_start=g.gap_start,
-                gap_end=g.gap_end,
-                bars_missing=g.bars_missing,
-                detected_at=now_utc,
-                resolved_at=None,
+        key = (g.gap_start, g.gap_end, g.bars_missing)
+        if key not in existing_by_key:
+            session.add(
+                DataGapModel(
+                    instrument_id=instrument.id,
+                    timeframe=timeframe,
+                    gap_start=g.gap_start,
+                    gap_end=g.gap_end,
+                    bars_missing=g.bars_missing,
+                    detected_at=now_utc,
+                    resolved_at=None,
+                )
             )
-        )
 
     return report
 
@@ -158,9 +165,10 @@ async def ingest_instrument_candles(
     *,
     days: int = 730,
     job_name: str = "backfill",
+    check_gaps: bool = True,
 ) -> BackfillSummary:
     """
-    Fetch, validate (data gates), upsert candles, evaluate calendar gaps,
+    Fetch, validate (data gates), upsert candles, optionally evaluate calendar gaps,
     and persist an ingestion_runs audit record (including rows_rejected).
     """
     inst_res = await session.execute(
@@ -170,19 +178,10 @@ async def ingest_instrument_candles(
     if instrument is None:
         raise ValueError(f"Instrument {symbol} not found in database. Run seed.py first.")
 
+    instrument_id = instrument.id
+    instrument_symbol = instrument.symbol
     source, ext_symbol = _resolve_source_and_symbol(instrument)
     started_at = datetime.now(UTC)
-
-    run_record = IngestionRunModel(
-        job_name=job_name,
-        source=source,
-        instrument_id=instrument.id,
-        timeframe=timeframe,
-        started_at=started_at,
-        status="running",
-    )
-    session.add(run_record)
-    await session.flush()
 
     try:
         end_utc = datetime.now(UTC)
@@ -198,51 +197,84 @@ async def ingest_instrument_candles(
             logger.warning(
                 "Data gates rejected {} bars for {} {} (sample: {})",
                 val.rejected_count,
-                instrument.symbol,
+                instrument_symbol,
                 timeframe,
                 val.rejection_reasons[:3],
             )
 
-        rows_written = await upsert_candles(session, instrument.id, timeframe, val.valid)
-        report = await refresh_data_gaps(session, instrument, timeframe)
+        rows_written = await upsert_candles(session, instrument_id, timeframe, val.valid)
+        if check_gaps:
+            report = await refresh_data_gaps(session, instrument, timeframe)
+            expected_bars = report.expected_bars
+            actual_bars = report.actual_bars
+            completeness_pct = report.completeness_pct
+            gaps_found = len(report.gaps)
+        else:
+            expected_bars = 0
+            actual_bars = rows_written
+            completeness_pct = 100.0
+            gaps_found = 0
 
-        run_record.finished_at = datetime.now(UTC)
-        run_record.rows_written = rows_written
-        run_record.rows_rejected = val.rejected_count
-        run_record.gaps_found = len(report.gaps)
-        run_record.status = "ok" if val.rejected_count == 0 else "partial"
+        status = "ok" if val.rejected_count == 0 else "partial"
+        session.add(
+            IngestionRunModel(
+                job_name=job_name,
+                source=source,
+                instrument_id=instrument_id,
+                timeframe=timeframe,
+                started_at=started_at,
+                finished_at=datetime.now(UTC),
+                rows_written=rows_written,
+                rows_rejected=val.rejected_count,
+                gaps_found=gaps_found,
+                status=status,
+            )
+        )
         await session.commit()
 
         logger.info(
             "{} {} {} [{}]: written={}, rejected={}, completeness={:.2f}% ({}/{}), gaps={}",
             job_name,
-            instrument.symbol,
+            instrument_symbol,
             timeframe,
             source,
             rows_written,
             val.rejected_count,
-            report.completeness_pct,
-            report.actual_bars,
-            report.expected_bars,
-            len(report.gaps),
+            completeness_pct,
+            actual_bars,
+            expected_bars,
+            gaps_found,
         )
 
         return BackfillSummary(
-            symbol=instrument.symbol,
+            symbol=instrument_symbol,
             timeframe=timeframe,
             source=source,
             rows_written=rows_written,
             rows_rejected=val.rejected_count,
             unclosed_skipped=val.unclosed_skipped,
-            expected_bars=report.expected_bars,
-            actual_bars=report.actual_bars,
-            completeness_pct=report.completeness_pct,
-            gaps_found=len(report.gaps),
-            status=run_record.status,
+            expected_bars=expected_bars,
+            actual_bars=actual_bars,
+            completeness_pct=completeness_pct,
+            gaps_found=gaps_found,
+            status=status,
         )
     except Exception as exc:
-        run_record.finished_at = datetime.now(UTC)
-        run_record.status = "failed"
-        run_record.error = str(exc)[:1000]
+        await session.rollback()
+        session.add(
+            IngestionRunModel(
+                job_name=job_name,
+                source=source,
+                instrument_id=instrument_id,
+                timeframe=timeframe,
+                started_at=started_at,
+                finished_at=datetime.now(UTC),
+                rows_written=0,
+                rows_rejected=0,
+                gaps_found=0,
+                status="failed",
+                error=str(exc)[:1000],
+            )
+        )
         await session.commit()
         raise

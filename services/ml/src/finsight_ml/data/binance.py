@@ -68,6 +68,8 @@ async def fetch_binance_klines(
     """
     if start.tzinfo is None or end.tzinfo is None:
         raise ValueError("start and end must be timezone-aware UTC datetimes")
+    if max_retries < 1:
+        raise ValueError("max_retries must be >= 1")
 
     api_base = (base_url or get_settings().BINANCE_REST).rstrip("/")
     url = f"{api_base}/api/v3/klines"
@@ -92,8 +94,17 @@ async def fetch_binance_klines(
 
             payload: list[list[Any]] | None = None
             for attempt in range(max_retries):
-                resp = await http.get(url, params=params)
+                try:
+                    resp = await http.get(url, params=params)
+                except httpx.TransportError:
+                    if attempt == max_retries - 1:
+                        raise
+                    await asyncio.sleep(min(1.0 * (2**attempt), 10.0))
+                    continue
+
                 if resp.status_code == 429 or resp.status_code >= 500:
+                    if attempt == max_retries - 1:
+                        resp.raise_for_status()
                     retry_after = float(resp.headers.get("Retry-After", 1.0 * (2**attempt)))
                     await asyncio.sleep(min(retry_after, 10.0))
                     continue

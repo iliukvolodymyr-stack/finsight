@@ -123,18 +123,33 @@ def is_nyse_regular_bar_time(open_time: datetime) -> bool:
     return bool(session_open <= dt_utc < session_close)
 
 
+def _last_expected_bar_of_session(cal: Any, session: Any, timeframe: str) -> datetime:
+    """Return the last expected bar open_time (UTC) for a completed XNYS session."""
+    session_open: datetime = cal.session_open(session).to_pydatetime().astimezone(UTC)
+    if timeframe == "1d":
+        return session_open
+    session_close: datetime = cal.session_close(session).to_pydatetime().astimezone(UTC)
+    bars = expected_bar_times("nyse", timeframe, session_open, session_close)
+    return bars[-1] if bars else session_open
+
+
 def is_quote_stale(
     exchange: str,
     last_bar_time: datetime | None,
     now: datetime,
     *,
+    timeframe: str = "1h",
     max_age_sec: int = 7200,
+    post_close_grace_sec: int = 900,
 ) -> bool:
     """
     Determine whether the latest stored quote/bar is stale.
     - Crypto (24/7): stale if age > max_age_sec.
-    - NYSE/US equities: NOT stale on weekends, holidays, or after-hours
-      as long as we have a bar from the most recently completed trading session.
+    - NYSE/US equities:
+      * During regular trading hours: stale if age > max_age_sec (after opening grace window).
+      * On weekends, holidays, pre-market, or after-hours: NOT stale if we have the
+        last expected bar of the most recently completed session (e.g. 15:30 ET for 1h
+        on full days, 12:30 ET on half-days, or session_open for 1d).
     """
     if last_bar_time is None:
         return True
@@ -148,8 +163,6 @@ def is_quote_stale(
     cal = get_nyse_calendar()
     now_ts = pd.Timestamp(now_utc).floor("min")
 
-    # If NYSE is currently in a regular trading session, apply live staleness check
-    # (allow a small grace window right after open before first 1h bar closes)
     try:
         in_session = bool(cal.is_open_on_minute(now_ts, ignore_breaks=True))
     except Exception:
@@ -157,22 +170,28 @@ def is_quote_stale(
 
     if in_session:
         day = pd.Timestamp(now_utc.date())
-        session_open = cal.session_open(day).to_pydatetime().astimezone(UTC)
-        # During the first bar after open, previous session close is still fresh
+        session_open: datetime = cal.session_open(day).to_pydatetime().astimezone(UTC)
+        # During the opening bar window, the previous session's closing bar is still fresh
         if (now_utc - session_open).total_seconds() < max_age_sec:
             prev_session = cal.previous_session(day)
-            prev_open: datetime = cal.session_open(prev_session).to_pydatetime().astimezone(UTC)
-            return bool(last_utc < prev_open)
+            prev_last_bar = _last_expected_bar_of_session(cal, prev_session, timeframe)
+            return bool(last_utc < prev_last_bar)
         return (now_utc - last_utc).total_seconds() > max_age_sec
 
-    # Market is closed (weekend, holiday, pre-market, or after-hours):
-    # Find the most recent session whose open has already passed.
+    # Market is closed (weekend, holiday, pre-market, or after-hours)
     today = pd.Timestamp(now_utc.date())
     if cal.is_session(today):
         today_open: datetime = cal.session_open(today).to_pydatetime().astimezone(UTC)
-        latest_session = today if now_utc >= today_open else cal.previous_session(today)
+        today_close: datetime = cal.session_close(today).to_pydatetime().astimezone(UTC)
+        if now_utc < today_open:
+            latest_session = cal.previous_session(today)
+        else:
+            # Right after close, allow post_close_grace_sec for the final bar to land
+            if (now_utc - today_close).total_seconds() < post_close_grace_sec:
+                return (now_utc - last_utc).total_seconds() > max_age_sec
+            latest_session = today
     else:
         latest_session = cal.date_to_session(today, direction="previous")
 
-    latest_session_open: datetime = cal.session_open(latest_session).to_pydatetime().astimezone(UTC)
-    return bool(last_utc < latest_session_open)
+    expected_last_bar = _last_expected_bar_of_session(cal, latest_session, timeframe)
+    return bool(last_utc < expected_last_bar)

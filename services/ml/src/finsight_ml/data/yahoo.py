@@ -133,6 +133,8 @@ async def fetch_yahoo_candles(
     """
     if start.tzinfo is None or end.tzinfo is None:
         raise ValueError("start and end must be timezone-aware UTC datetimes")
+    if max_retries < 1:
+        raise ValueError("max_retries must be >= 1")
 
     now_utc = datetime.now(UTC)
     start_utc = start.astimezone(UTC)
@@ -155,9 +157,19 @@ async def fetch_yahoo_candles(
     try:
         payload: dict[str, Any] = {}
         for attempt in range(max_retries):
-            resp = await http.get(url, params=params)
-            if resp.status_code == 429 or resp.status_code >= 500:
+            try:
+                resp = await http.get(url, params=params)
+            except httpx.TransportError:
+                if attempt == max_retries - 1:
+                    raise
                 await asyncio.sleep(min(1.5 * (2**attempt), 10.0))
+                continue
+
+            if resp.status_code == 429 or resp.status_code >= 500:
+                if attempt == max_retries - 1:
+                    resp.raise_for_status()
+                retry_after = float(resp.headers.get("Retry-After", 1.5 * (2**attempt)))
+                await asyncio.sleep(min(retry_after, 10.0))
                 continue
             resp.raise_for_status()
             payload = resp.json()
