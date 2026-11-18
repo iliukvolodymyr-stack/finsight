@@ -171,8 +171,9 @@ def is_quote_stale(
     if in_session:
         day = pd.Timestamp(now_utc.date())
         session_open: datetime = cal.session_open(day).to_pydatetime().astimezone(UTC)
-        # During the opening bar window, the previous session's closing bar is still fresh
-        if (now_utc - session_open).total_seconds() < max_age_sec:
+        # For daily bars (or during the opening bar window for intraday),
+        # today's bar has not closed yet, so the previous session's last bar is fresh.
+        if timeframe == "1d" or (now_utc - session_open).total_seconds() < max_age_sec:
             prev_session = cal.previous_session(day)
             prev_last_bar = _last_expected_bar_of_session(cal, prev_session, timeframe)
             return bool(last_utc < prev_last_bar)
@@ -188,6 +189,9 @@ def is_quote_stale(
         else:
             # Right after close, allow post_close_grace_sec for the final bar to land
             if (now_utc - today_close).total_seconds() < post_close_grace_sec:
+                if timeframe == "1d":
+                    prev_session = cal.previous_session(today)
+                    return bool(last_utc < _last_expected_bar_of_session(cal, prev_session, "1d"))
                 return (now_utc - last_utc).total_seconds() > max_age_sec
             latest_session = today
     else:

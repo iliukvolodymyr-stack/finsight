@@ -10,6 +10,16 @@ from finsight_ml.data.types import RawCandle
 BINANCE_MAX_LIMIT = 1000
 
 
+def _retry_delay(resp: httpx.Response, default_sec: float) -> float:
+    raw = resp.headers.get("Retry-After")
+    if raw is not None:
+        try:
+            return min(max(float(raw), 0.0), 10.0)
+        except ValueError:
+            pass
+    return min(default_sec, 10.0)
+
+
 def parse_binance_klines(
     payload: list[list[Any]],
     *,
@@ -105,8 +115,7 @@ async def fetch_binance_klines(
                 if resp.status_code == 429 or resp.status_code >= 500:
                     if attempt == max_retries - 1:
                         resp.raise_for_status()
-                    retry_after = float(resp.headers.get("Retry-After", 1.0 * (2**attempt)))
-                    await asyncio.sleep(min(retry_after, 10.0))
+                    await asyncio.sleep(_retry_delay(resp, 1.0 * (2**attempt)))
                     continue
                 resp.raise_for_status()
                 payload = resp.json()

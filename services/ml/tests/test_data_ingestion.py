@@ -213,6 +213,15 @@ def test_is_quote_stale_respects_spy_weekends_and_holidays():
     thanksgiving = datetime(2025, 11, 27, 17, 0, 0, tzinfo=UTC)
     assert is_quote_stale("nyse", wed_last, thanksgiving) is False
 
+    # Mid-session & post-close grace for 1d: Tuesday's daily bar stays fresh on Wednesday
+    tue_daily = datetime(2025, 11, 18, 14, 30, 0, tzinfo=UTC)
+    wed_mid_session = datetime(2025, 11, 19, 18, 0, 0, tzinfo=UTC)
+    wed_post_close_grace = datetime(2025, 11, 19, 21, 5, 0, tzinfo=UTC)
+    wed_after_grace = datetime(2025, 11, 19, 21, 20, 0, tzinfo=UTC)
+    assert is_quote_stale("nyse", tue_daily, wed_mid_session, timeframe="1d") is False
+    assert is_quote_stale("nyse", tue_daily, wed_post_close_grace, timeframe="1d") is False
+    assert is_quote_stale("nyse", tue_daily, wed_after_grace, timeframe="1d") is True
+
     # Missing Friday's session completely when checked on Sunday -> STALE
     thursday_last = datetime(2025, 11, 20, 20, 30, 0, tzinfo=UTC)
     assert is_quote_stale("nyse", thursday_last, sunday_noon) is True

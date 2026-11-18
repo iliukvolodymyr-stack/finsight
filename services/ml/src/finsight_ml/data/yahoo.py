@@ -12,6 +12,16 @@ YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) FinSig
 YAHOO_1H_MAX_DAYS = 720
 
 
+def _retry_delay(resp: httpx.Response, default_sec: float) -> float:
+    raw = resp.headers.get("Retry-After")
+    if raw is not None:
+        try:
+            return min(max(float(raw), 0.0), 10.0)
+        except ValueError:
+            pass
+    return min(default_sec, 10.0)
+
+
 def _to_float_or_nan(val: Any) -> float:
     if val is None:
         return float("nan")
@@ -168,8 +178,7 @@ async def fetch_yahoo_candles(
             if resp.status_code == 429 or resp.status_code >= 500:
                 if attempt == max_retries - 1:
                     resp.raise_for_status()
-                retry_after = float(resp.headers.get("Retry-After", 1.5 * (2**attempt)))
-                await asyncio.sleep(min(retry_after, 10.0))
+                await asyncio.sleep(_retry_delay(resp, 1.5 * (2**attempt)))
                 continue
             resp.raise_for_status()
             payload = resp.json()
