@@ -311,14 +311,17 @@ PK `(instrument_id, timeframe, as_of, model_version_id)`.
 | `params` | jsonb | Гіперпараметри |
 | `metrics` | jsonb | Метрики CV та тесту |
 | `artifact_uri` | text | `s3://models/lgbm_core/1.3.0/` |
+| `instrument_id` | uuid NULL | Цільовий актив для per-asset моделі (`NULL` для мультиактивної) |
+| `timeframe` | text NULL | Таймфрейм моделі (`1h`, `1d`) |
 | `feature_set_id` | uuid | |
 | `dataset_hash` | text | Хеш маніфесту снапшоту |
+| `train_data_end` | timestamptz | Останній `as_of` даних навчання (захист від in-sample бектесту: `period_start >= train_data_end + embargo`) |
 | `trained_at` | timestamptz | |
 | `promoted_at` | timestamptz NULL | |
 | `notes` | text | |
 
-Обмеження: частковий унікальний індекс — лише одна `production`-версія на `(name, task)`:
-`CREATE UNIQUE INDEX ... ON model_versions(name, task) WHERE status = 'production';`
+Обмеження: частковий унікальний індекс — лише одна `production`-версія на `(name, task, instrument_id, timeframe)`:
+`CREATE UNIQUE INDEX ... ON model_versions(name, task, instrument_id, timeframe) WHERE status = 'production';`
 
 `predictions`:
 

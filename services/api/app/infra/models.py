@@ -328,14 +328,27 @@ class ModelVersionModel(Base):
             "status IN ('candidate','production','archived','failed')",
             name="ck_model_versions_status",
         ),
-        UniqueConstraint("name", "task", "semver", name="uq_model_versions_name_task_semver"),
         Index(
-            "uq_model_versions_prod_name_task",
+            "uq_model_versions_scope_semver",
             "name",
             "task",
+            "instrument_id",
+            "timeframe",
+            "semver",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
+        ),
+        Index(
+            "uq_model_versions_prod_scope",
+            "name",
+            "task",
+            "instrument_id",
+            "timeframe",
             unique=True,
             postgresql_where=text("status = 'production'"),
+            postgresql_nulls_not_distinct=True,
         ),
+        Index("idx_model_versions_inst_tf_status", "instrument_id", "timeframe", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid7)
@@ -347,12 +360,19 @@ class ModelVersionModel(Base):
     params: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     artifact_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    instrument_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("instruments.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    timeframe: Mapped[str | None] = mapped_column(String(10), nullable=True)
     feature_set_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("feature_sets.id", ondelete="RESTRICT"),
         nullable=False,
     )
     dataset_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    train_data_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     trained_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

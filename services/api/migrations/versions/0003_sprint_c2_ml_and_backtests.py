@@ -120,12 +120,20 @@ def upgrade() -> None:
         ),
         sa.Column("artifact_uri", sa.Text(), nullable=False),
         sa.Column(
+            "instrument_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("instruments.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("timeframe", sa.String(length=10), nullable=True),
+        sa.Column(
             "feature_set_id",
             postgresql.UUID(as_uuid=True),
             sa.ForeignKey("feature_sets.id", ondelete="RESTRICT"),
             nullable=False,
         ),
         sa.Column("dataset_hash", sa.String(length=64), nullable=False),
+        sa.Column("train_data_end", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             "trained_at",
             sa.DateTime(timezone=True),
@@ -142,14 +150,26 @@ def upgrade() -> None:
             "status IN ('candidate','production','archived','failed')",
             name="ck_model_versions_status",
         ),
-        sa.UniqueConstraint("name", "task", "semver", name="uq_model_versions_name_task_semver"),
     )
     op.create_index(
-        "uq_model_versions_prod_name_task",
+        "uq_model_versions_scope_semver",
         "model_versions",
-        ["name", "task"],
+        ["name", "task", "instrument_id", "timeframe", "semver"],
+        unique=True,
+        postgresql_nulls_not_distinct=True,
+    )
+    op.create_index(
+        "uq_model_versions_prod_scope",
+        "model_versions",
+        ["name", "task", "instrument_id", "timeframe"],
         unique=True,
         postgresql_where=sa.text("status = 'production'"),
+        postgresql_nulls_not_distinct=True,
+    )
+    op.create_index(
+        "idx_model_versions_inst_tf_status",
+        "model_versions",
+        ["instrument_id", "timeframe", "status"],
     )
 
     # 5. predictions
