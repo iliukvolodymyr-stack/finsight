@@ -5,6 +5,7 @@ description = "FinSight AI API service"
 requires-python = ">=3.12"
 dependencies = [
     "finsight-core",
+    "finsight-ml",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "sqlalchemy[asyncio]>=2.0.36",
@@ -16,6 +17,8 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "email-validator>=2.2.0",
     "uuid-utils>=0.10.0",
+    "httpx>=0.28.0",
+    "feedparser>=6.0.11",
 ]
 
 [project.optional-dependencies]

@@ -23,6 +23,9 @@ migration msg:
 seed:
     py -3 -m uv run python scripts/seed.py
 
+backfill days="730":
+    py -3 -m uv run python scripts/backfill.py --days {{days}}
+
 dev-api:
     py -3 -m uv run uvicorn services.api.app.main:app --reload --port 8000
 

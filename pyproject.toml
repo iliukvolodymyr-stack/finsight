@@ -68,6 +68,8 @@ module = [
     "lightgbm.*",
     "joblib.*",
     "redis.*",
+    "exchange_calendars.*",
+    "feedparser.*",
 ]
 ignore_missing_imports = true
 
