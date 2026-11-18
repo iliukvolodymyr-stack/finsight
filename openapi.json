@@ -391,6 +391,76 @@
         }
       }
     },
+    "/api/v1/instruments/{id}/refresh": {
+      "post": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Refresh Instrument",
+        "description": "Force incremental candle refresh with Redis distributed lock and 60s cooldown.",
+        "operationId": "refresh_instrument_api_v1_instruments__id__refresh_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(1h|1d)$",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instruments/{id}/candles": {
       "get": {
         "tags": [
@@ -494,6 +564,7 @@
           "Candles & Indicators"
         ],
         "summary": "Get Indicators",
+        "description": "Compute technical indicators on closed bars only using finsight_ml.features.indicators,\npre-loading INDICATOR_WARMUP_BARS (250) bars prior to the window so EMA200 is warmed up.",
         "operationId": "get_indicators_api_v1_instruments__id__indicators_get",
         "parameters": [
           {
@@ -514,6 +585,50 @@
               "pattern": "^(1m|15m|1h|4h|1d)$",
               "default": "1h",
               "title": "Timeframe"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 1000,
+              "title": "Limit"
             }
           }
         ],
@@ -1071,6 +1186,17 @@
             "type": "number",
             "title": "V"
           },
+          "adjusted_close": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjusted Close"
+          },
           "closed": {
             "type": "boolean",
             "title": "Closed",
@@ -1269,6 +1395,140 @@
         "type": "object",
         "title": "HealthResponse"
       },
+      "IndicatorPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T"
+          },
+          "ema20": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema20"
+          },
+          "ema50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema50"
+          },
+          "ema200": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema200"
+          },
+          "rsi14": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rsi14"
+          },
+          "macd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macd"
+          },
+          "macd_signal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macd Signal"
+          },
+          "macd_hist": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macd Hist"
+          },
+          "bb_upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bb Upper"
+          },
+          "bb_mid": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bb Mid"
+          },
+          "bb_lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bb Lower"
+          },
+          "atr14": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr14"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t"
+        ],
+        "title": "IndicatorPoint"
+      },
       "IndicatorsResponse": {
         "properties": {
           "instrument_id": {
@@ -1285,20 +1545,7 @@
           },
           "items": {
             "items": {
-              "additionalProperties": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "type": "object"
+              "$ref": "#/components/schemas/IndicatorPoint"
             },
             "type": "array",
             "title": "Items"
@@ -1580,6 +1827,39 @@
           "redis"
         ],
         "title": "ReadyResponse"
+      },
+      "RefreshResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "rows_written": {
+            "type": "integer",
+            "title": "Rows Written"
+          },
+          "rows_rejected": {
+            "type": "integer",
+            "title": "Rows Rejected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "timeframe",
+          "status",
+          "rows_written",
+          "rows_rejected"
+        ],
+        "title": "RefreshResponse"
       },
       "RegisterRequest": {
         "properties": {

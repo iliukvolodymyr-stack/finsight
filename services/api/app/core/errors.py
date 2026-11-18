@@ -13,6 +13,7 @@ class AppException(Exception):
         title: str = "Bad Request",
         detail: str | None = None,
         errors: list[ErrorDetail] | None = None,
+        headers: dict[str, str] | None = None,
     ):
         super().__init__(detail or title)
         self.status_code = status_code
@@ -20,6 +21,7 @@ class AppException(Exception):
         self.title = title
         self.detail = detail
         self.errors = errors or []
+        self.headers = headers
 
 
 class NotFoundException(AppException):
@@ -32,13 +34,26 @@ class NotFoundException(AppException):
         )
 
 
+class RateLimitedException(AppException):
+    def __init__(self, retry_after: int, detail: str = "Rate limit exceeded"):
+        super().__init__(
+            status_code=429,
+            code="RATE_LIMITED",
+            title="Too Many Requests",
+            detail=detail,
+            headers={"Retry-After": str(max(1, retry_after))},
+        )
+
+
 async def app_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    headers: dict[str, str] | None = None
     if isinstance(exc, AppException):
         code = exc.code
         title = exc.title
         status_code = exc.status_code
         detail = exc.detail
         errors = exc.errors
+        headers = exc.headers
     else:
         code = "INTERNAL_ERROR"
         title = "Internal Server Error"
@@ -64,6 +79,7 @@ async def app_exception_handler(request: Request, exc: Exception) -> JSONRespons
         status_code=status_code,
         content=problem.model_dump(),
         media_type="application/problem+json",
+        headers=headers,
     )
 
 

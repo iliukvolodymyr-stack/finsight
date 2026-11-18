@@ -157,6 +157,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/instruments/{id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Instrument
+         * @description Force incremental candle refresh with Redis distributed lock and 60s cooldown.
+         */
+        post: operations["refresh_instrument_api_v1_instruments__id__refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/instruments/{id}/candles": {
         parameters: {
             query?: never;
@@ -181,7 +201,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Indicators */
+        /**
+         * Get Indicators
+         * @description Compute technical indicators on closed bars only using finsight_ml.features.indicators,
+         *     pre-loading INDICATOR_WARMUP_BARS (250) bars prior to the window so EMA200 is warmed up.
+         */
         get: operations["get_indicators_api_v1_instruments__id__indicators_get"];
         put?: never;
         post?: never;
@@ -321,6 +345,8 @@ export interface components {
             c: number;
             /** V */
             v: number;
+            /** Adjusted Close */
+            adjusted_close?: number | null;
             /**
              * Closed
              * @default true
@@ -420,6 +446,33 @@ export interface components {
              */
             status: string;
         };
+        /** IndicatorPoint */
+        IndicatorPoint: {
+            /** T */
+            t: string;
+            /** Ema20 */
+            ema20?: number | null;
+            /** Ema50 */
+            ema50?: number | null;
+            /** Ema200 */
+            ema200?: number | null;
+            /** Rsi14 */
+            rsi14?: number | null;
+            /** Macd */
+            macd?: number | null;
+            /** Macd Signal */
+            macd_signal?: number | null;
+            /** Macd Hist */
+            macd_hist?: number | null;
+            /** Bb Upper */
+            bb_upper?: number | null;
+            /** Bb Mid */
+            bb_mid?: number | null;
+            /** Bb Lower */
+            bb_lower?: number | null;
+            /** Atr14 */
+            atr14?: number | null;
+        };
         /** IndicatorsResponse */
         IndicatorsResponse: {
             /** Instrument Id */
@@ -429,9 +482,7 @@ export interface components {
             /** Timeframe */
             timeframe: string;
             /** Items */
-            items: {
-                [key: string]: number | string | null;
-            }[];
+            items: components["schemas"]["IndicatorPoint"][];
         };
         /** InstrumentResponse */
         InstrumentResponse: {
@@ -565,6 +616,19 @@ export interface components {
             database: string;
             /** Redis */
             redis: string;
+        };
+        /** RefreshResponse */
+        RefreshResponse: {
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Status */
+            status: string;
+            /** Rows Written */
+            rows_written: number;
+            /** Rows Rejected */
+            rows_rejected: number;
         };
         /** RegisterRequest */
         RegisterRequest: {
@@ -904,6 +968,41 @@ export interface operations {
             };
         };
     };
+    refresh_instrument_api_v1_instruments__id__refresh_post: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_candles_api_v1_instruments__id__candles_get: {
         parameters: {
             query?: {
@@ -944,6 +1043,9 @@ export interface operations {
         parameters: {
             query?: {
                 timeframe?: string;
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
             };
             header?: never;
             path: {
