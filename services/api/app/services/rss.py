@@ -31,18 +31,18 @@ _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _WHITESPACE_RE = re.compile(r"\s+")
 _TRACKING_QUERY_PREFIXES = ("utm_", "fbclid", "gclid", "mc_cid", "mc_eid", "ref")
 
-# Word-boundary rules so "method" never matches ETH and "spyware" never matches SPY
+# Word-boundary rules: match cashtags ($BTC/$ETH/$SPY) while never matching "method" or "spyware"
 _TICKER_RULES: dict[str, list[tuple[re.Pattern[str], float]]] = {
     "BTCUSDT": [
-        (re.compile(r"\b(bitcoin|btcusdt|\$?btc)\b", re.IGNORECASE), 1.0),
+        (re.compile(r"(?<![\w$])\$?(?:bitcoin|btcusdt|btc)\b", re.IGNORECASE), 1.0),
         (re.compile(r"\b(satoshi|lightning network|btc etf)\b", re.IGNORECASE), 0.7),
     ],
     "ETHUSDT": [
-        (re.compile(r"\b(ethereum|ethusdt|\$?eth)\b", re.IGNORECASE), 1.0),
+        (re.compile(r"(?<![\w$])\$?(?:ethereum|ethusdt|eth)\b", re.IGNORECASE), 1.0),
         (re.compile(r"\b(vitalik|ether|eip-\d+|eth etf)\b", re.IGNORECASE), 0.7),
     ],
     "SPY": [
-        (re.compile(r"\b(s&p\s*500|sp500|spx|\$?spy)\b", re.IGNORECASE), 1.0),
+        (re.compile(r"(?<![\w$])\$?(?:s&p\s*500|sp500|spx|spy)\b", re.IGNORECASE), 1.0),
         (
             re.compile(
                 r"\b(wall street|federal reserve|fomc|u\.s\.\s+stocks?|nasdaq|dow jones)\b",
@@ -103,8 +103,9 @@ def canonicalize_url(raw_url: str) -> str:
 
 
 def clean_rss_text(raw: str, max_len: int = MAX_SUMMARY_LEN) -> str:
-    """Strip HTML tags, unescape entities, and collapse whitespace (short RSS summary only)."""
-    unescaped = html.unescape(raw or "")
+    """Strip NUL bytes, HTML tags, unescape entities, and collapse whitespace."""
+    sanitized = (raw or "").replace("\x00", "")
+    unescaped = html.unescape(sanitized)
     stripped = _HTML_TAG_RE.sub(" ", unescaped)
     collapsed = _WHITESPACE_RE.sub(" ", stripped).strip()
     if len(collapsed) > max_len:
@@ -282,15 +283,17 @@ async def ingest_rss_news(
         timeout=15.0,
     )
 
+    source_specs = [(src.id, src.name, src.url) for src in sources]
+
     total_written = 0
     total_rejected = 0
     total_links = 0
     failed_sources: list[str] = []
 
     try:
-        for src in sources:
+        for src_id, src_name, src_url in source_specs:
             try:
-                xml_text = await _fetch_feed_xml(http, src.url)
+                xml_text = await _fetch_feed_xml(http, src_url)
                 parsed = parse_rss_feed(xml_text, now=datetime.now(UTC), availability_basis="live")
                 total_rejected += parsed.rejected_count
 
@@ -303,7 +306,7 @@ async def ingest_rss_news(
                     rows.append(
                         {
                             "id": new_uuid7(),
-                            "source_id": src.id,
+                            "source_id": src_id,
                             "url": item.url,
                             "url_hash": item.url_hash,
                             "content_hash": item.content_hash,
@@ -320,43 +323,46 @@ async def ingest_rss_news(
                     )
                     item_by_url_hash[item.url_hash] = item
 
-                stmt = (
-                    pg_insert(NewsArticleModel)
-                    .values(rows)
-                    .on_conflict_do_nothing(index_elements=["url_hash"])
-                    .returning(NewsArticleModel.id, NewsArticleModel.url_hash)
-                )
-                inserted = list((await session.execute(stmt)).all())
-                total_written += len(inserted)
-
-                link_rows: list[dict[str, Any]] = []
-                for article_id, u_hash in inserted:
-                    art_item = item_by_url_hash.get(u_hash)
-                    if art_item is None:
-                        continue
-                    for inst_id, relevance in match_instruments(
-                        art_item.title, art_item.body, symbol_to_id
-                    ):
-                        link_rows.append(
-                            {
-                                "article_id": article_id,
-                                "instrument_id": inst_id,
-                                "relevance": relevance,
-                            }
-                        )
-
-                if link_rows:
-                    link_stmt = (
-                        pg_insert(NewsArticleInstrumentModel)
-                        .values(link_rows)
-                        .on_conflict_do_nothing(constraint="pk_news_article_instruments")
+                # Isolate each source in a SAVEPOINT so a DB error never poisons other feeds
+                async with session.begin_nested():
+                    stmt = (
+                        pg_insert(NewsArticleModel)
+                        .values(rows)
+                        .on_conflict_do_nothing(index_elements=["url_hash"])
+                        .returning(NewsArticleModel.id, NewsArticleModel.url_hash)
                     )
-                    await session.execute(link_stmt)
-                    total_links += len(link_rows)
+                    inserted = list((await session.execute(stmt)).all())
+
+                    link_rows: list[dict[str, Any]] = []
+                    for article_id, u_hash in inserted:
+                        art_item = item_by_url_hash.get(u_hash)
+                        if art_item is None:
+                            continue
+                        for inst_id, relevance in match_instruments(
+                            art_item.title, art_item.body, symbol_to_id
+                        ):
+                            link_rows.append(
+                                {
+                                    "article_id": article_id,
+                                    "instrument_id": inst_id,
+                                    "relevance": relevance,
+                                }
+                            )
+
+                    if link_rows:
+                        link_stmt = (
+                            pg_insert(NewsArticleInstrumentModel)
+                            .values(link_rows)
+                            .on_conflict_do_nothing(constraint="pk_news_article_instruments")
+                        )
+                        await session.execute(link_stmt)
+
+                total_written += len(inserted)
+                total_links += len(link_rows)
 
             except Exception as exc:
-                logger.warning("RSS fetch failed for {}: {}", src.name, exc)
-                failed_sources.append(f"{src.name}: {exc}")
+                logger.warning("RSS fetch failed for {}: {}", src_name, exc)
+                failed_sources.append(f"{src_name}: {exc}")
 
         if failed_sources and len(failed_sources) == len(sources) and sources:
             run_status = "failed"

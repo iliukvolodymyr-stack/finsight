@@ -13,11 +13,13 @@ from app.infra.models import (
 )
 from app.services.rss import (
     canonicalize_url,
+    clean_rss_text,
     ingest_rss_news,
     match_instruments,
     parse_rss_feed,
 )
 from app.worker.celery_app import celery_app
+from app.worker.tasks import _needs_crypto_poll
 from sqlalchemy import delete, select
 
 SAMPLE_RSS_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -100,16 +102,37 @@ def test_match_instruments_word_boundaries():
     assert m1[sym_map["ETHUSDT"]] == 1.0
     assert sym_map["SPY"] not in m1
 
-    # Word-boundary protection: "method" != ETH, "spyware" != SPY
+    # Cashtags ($BTC, $ETH, $SPY) must match cleanly
+    m_cashtag = dict(match_instruments("$BTC and $ETH rally while $SPY dips", "", sym_map))
+    assert m_cashtag[sym_map["BTCUSDT"]] == 1.0
+    assert m_cashtag[sym_map["ETHUSDT"]] == 1.0
+    assert m_cashtag[sym_map["SPY"]] == 1.0
+
+    # Word-boundary protection: "method" != ETH, "spyware" != SPY, "foo$BTC" != BTC
     m_false = match_instruments(
-        "New cryptographic method blocks spyware attacks",
+        "New cryptographic method blocks spyware attacks (foo$BTC)",
         "Whether researchers adopt this method remains unclear.",
         sym_map,
     )
     assert m_false == []
 
+    # NUL bytes must be stripped so Postgres TEXT inserts never crash
+    assert clean_rss_text("Hello\x00 <b>World</b>\x00!") == "Hello World !"
+
     m_spy = dict(match_instruments("S&P 500 hits record", "SPY volume climbs.", sym_map))
     assert m_spy[sym_map["SPY"]] == 1.0
+
+
+def test_needs_crypto_poll_skips_redundant_minute_calls():
+    now = datetime(2026, 11, 18, 12, 15, 0, tzinfo=UTC)
+    # 11:00 UTC closed bar is already in DB -> skip until 13:00 UTC
+    assert _needs_crypto_poll(datetime(2026, 11, 18, 11, 0, 0, tzinfo=UTC), "1h", now) is False
+    # Only 10:00 UTC in DB -> 11:00 bar closed -> must poll!
+    assert _needs_crypto_poll(datetime(2026, 11, 18, 10, 0, 0, tzinfo=UTC), "1h", now) is True
+    # Daily bar: Nov 17 00:00 UTC is already stored -> skip; Nov 16 -> poll!
+    assert _needs_crypto_poll(datetime(2026, 11, 17, 0, 0, 0, tzinfo=UTC), "1d", now) is False
+    assert _needs_crypto_poll(datetime(2026, 11, 16, 0, 0, 0, tzinfo=UTC), "1d", now) is True
+    assert _needs_crypto_poll(None, "1h", now) is True
 
 
 @pytest.mark.asyncio

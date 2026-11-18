@@ -1,7 +1,8 @@
 import asyncio
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from app.infra.models import CandleModel, IngestionRunModel, InstrumentModel
 from app.services.ingestion import ingest_instrument_candles, refresh_data_gaps
@@ -39,31 +40,49 @@ def _run_with_fresh_session[T](fn: Callable[[AsyncSession], Awaitable[T]]) -> T:
     return asyncio.run(_runner())
 
 
-async def _should_poll_instrument(
+def _needs_crypto_poll(latest_ts: datetime | None, timeframe: str, now_utc: datetime) -> bool:
+    """Return True only when a newer closed 24/7 crypto bar should exist than latest_ts."""
+    if latest_ts is None:
+        return True
+    latest_utc = latest_ts.astimezone(UTC)
+    if timeframe == "1h":
+        expected_closed = now_utc.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
+        return latest_utc < expected_closed
+    if timeframe == "1d":
+        expected_closed = now_utc.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+            days=1
+        )
+        return latest_utc < expected_closed
+    return True
+
+
+async def _should_poll_bar(
     session: AsyncSession,
-    inst: InstrumentModel,
+    instrument_id: UUID,
+    exchange: str,
+    timeframe: str,
     now_utc: datetime,
 ) -> bool:
-    if not is_equity_exchange(inst.exchange):
-        return True
-
     latest_res = await session.execute(
         select(CandleModel.open_time)
         .where(
-            CandleModel.instrument_id == inst.id,
-            CandleModel.timeframe == "1h",
+            CandleModel.instrument_id == instrument_id,
+            CandleModel.timeframe == timeframe,
             CandleModel.is_closed.is_(True),
         )
         .order_by(CandleModel.open_time.desc())
         .limit(1)
     )
     latest_ts = latest_res.scalar_one_or_none()
-    # Poll equities only if quote is stale (missing bars or active session needing update)
+
+    if not is_equity_exchange(exchange):
+        return _needs_crypto_poll(latest_ts, timeframe, now_utc)
+
     return is_quote_stale(
-        inst.exchange,
+        exchange,
         latest_ts,
         now_utc,
-        timeframe="1h",
+        timeframe=timeframe,
         max_age_sec=3600,
         post_close_grace_sec=0,
     )
@@ -71,7 +90,10 @@ async def _should_poll_instrument(
 
 @celery_app.task(name="ingest.poll_closed_bars")
 def poll_closed_bars() -> dict[str, Any]:
-    """Poll latest closed 1h bars for active instruments (skips equities when market closed & fresh)."""
+    """
+    Poll newly closed 1h and 1d bars for active instruments.
+    Skips exchange calls when the latest expected closed bar is already stored in DB.
+    """
 
     async def _task(session: AsyncSession) -> dict[str, Any]:
         now_utc = datetime.now(UTC)
@@ -86,27 +108,34 @@ def poll_closed_bars() -> dict[str, Any]:
             .scalars()
             .all()
         )
+        # Materialize plain tuples before the loop so a rollback never triggers MissingGreenlet
+        targets: list[tuple[UUID, str, str]] = [
+            (inst.id, inst.symbol, inst.exchange) for inst in instruments
+        ]
+
         polled: list[str] = []
         skipped: list[str] = []
         errors: dict[str, str] = {}
 
-        for inst in instruments:
-            if not await _should_poll_instrument(session, inst, now_utc):
-                skipped.append(inst.symbol)
-                continue
-            try:
-                await ingest_instrument_candles(
-                    session,
-                    symbol=inst.symbol,
-                    timeframe="1h",
-                    days=2,
-                    job_name="bar_poll",
-                    check_gaps=False,
-                )
-                polled.append(inst.symbol)
-            except Exception as exc:
-                logger.warning("bar_poll failed for {}: {}", inst.symbol, exc)
-                errors[inst.symbol] = str(exc)[:300]
+        for inst_id, symbol, exchange in targets:
+            for tf, lookback_days in (("1h", 2), ("1d", 7)):
+                key = f"{symbol}:{tf}"
+                if not await _should_poll_bar(session, inst_id, exchange, tf, now_utc):
+                    skipped.append(key)
+                    continue
+                try:
+                    await ingest_instrument_candles(
+                        session,
+                        symbol=symbol,
+                        timeframe=tf,
+                        days=lookback_days,
+                        job_name="bar_poll",
+                        check_gaps=False,
+                    )
+                    polled.append(key)
+                except Exception as exc:
+                    logger.warning("bar_poll failed for {}: {}", key, exc)
+                    errors[key] = str(exc)[:300]
 
         return {"polled": polled, "skipped": skipped, "errors": errors}
 
