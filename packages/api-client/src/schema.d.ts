@@ -204,7 +204,7 @@ export interface paths {
         /**
          * Get Indicators
          * @description Compute technical indicators on closed bars only using finsight_ml.features.indicators,
-         *     pre-loading INDICATOR_WARMUP_BARS (250) bars prior to the window so EMA200 is warmed up.
+         *     pre-loading INDICATOR_WARMUP_BARS (500) bars prior to the window so EMA200 is warmed up.
          */
         get: operations["get_indicators_api_v1_instruments__id__indicators_get"];
         put?: never;
