@@ -17,4 +17,4 @@ COPY services/ services/
 
 RUN uv sync --frozen --no-dev --package finsight-api
 
-CMD ["uv", "run", "celery", "-A", "services.api.app.worker.celery_app", "worker", "-l", "INFO", "-c", "4", "-Q", "default,ingest,inference,nlp,alerts"]
+CMD ["uv", "run", "celery", "-A", "app.worker.celery_app", "worker", "-l", "INFO", "-c", "4", "-Q", "default,ingest,inference,nlp,alerts"]

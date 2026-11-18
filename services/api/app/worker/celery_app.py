@@ -7,6 +7,7 @@ celery_app = Celery(
     "finsight_worker",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=["app.worker.tasks"],
 )
 
 celery_app.conf.update(
@@ -21,6 +22,23 @@ celery_app.conf.update(
         "inference.*": {"queue": "inference"},
         "nlp.*": {"queue": "nlp"},
         "alerts.*": {"queue": "alerts"},
+    },
+    beat_schedule={
+        "poll-closed-bars-1m": {
+            "task": "ingest.poll_closed_bars",
+            "schedule": 60.0,
+            "options": {"queue": "ingest"},
+        },
+        "fetch-rss-news-5m": {
+            "task": "ingest.fetch_rss_news",
+            "schedule": 300.0,
+            "options": {"queue": "ingest"},
+        },
+        "check-data-gaps-1h": {
+            "task": "ingest.check_data_gaps",
+            "schedule": 3600.0,
+            "options": {"queue": "ingest"},
+        },
     },
 )
 

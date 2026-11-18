@@ -11,8 +11,11 @@ bootstrap:
 up:
     docker compose -f infra/compose/docker-compose.dev.yml up -d
 
+up-ingest:
+    docker compose -f infra/compose/docker-compose.dev.yml --profile ingest up -d --build
+
 down:
-    docker compose -f infra/compose/docker-compose.dev.yml down
+    docker compose -f infra/compose/docker-compose.dev.yml --profile ingest down
 
 migrate:
     Push-Location services/api; py -3 -m uv run alembic upgrade head; Pop-Location
@@ -26,14 +29,17 @@ seed:
 backfill days="730":
     py -3 -m uv run python scripts/backfill.py --days {{days}}
 
+fetch-news:
+    py -3 -m uv run python scripts/fetch_news.py
+
 dev-api:
-    py -3 -m uv run uvicorn services.api.app.main:app --reload --port 8000
+    py -3 -m uv run uvicorn --app-dir services/api app.main:app --reload --port 8000
 
 dev-worker:
-    py -3 -m uv run celery -A services.api.app.worker.celery_app worker -l INFO -P solo -Q default,ingest,inference,nlp,alerts
+    py -3 -m uv run celery -A app.worker.celery_app worker -l INFO -P solo -Q default,ingest,inference,nlp,alerts
 
 dev-beat:
-    py -3 -m uv run celery -A services.api.app.worker.celery_app beat -l INFO
+    py -3 -m uv run celery -A app.worker.celery_app beat -l INFO
 
 dev-streamer:
     py -3 -m uv run python -m finsight_streamer

@@ -31,6 +31,70 @@ services:
       timeout: 5s
       retries: 5
 
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: finsight-worker
+    profiles: ["ingest"]
+    restart: always
+    environment:
+      APP_ENV: local
+      AUTH_MODE: single_user
+      DATABASE_URL: postgresql+asyncpg://finsight:finsight@postgres:5432/finsight
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command:
+      [
+        "uv",
+        "run",
+        "celery",
+        "-A",
+        "app.worker.celery_app",
+        "worker",
+        "-l",
+        "INFO",
+        "-c",
+        "2",
+        "-Q",
+        "default,ingest,inference,nlp,alerts",
+      ]
+
+  beat:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: finsight-beat
+    profiles: ["ingest"]
+    restart: always
+    environment:
+      APP_ENV: local
+      AUTH_MODE: single_user
+      DATABASE_URL: postgresql+asyncpg://finsight:finsight@postgres:5432/finsight
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command:
+      [
+        "uv",
+        "run",
+        "celery",
+        "-A",
+        "app.worker.celery_app",
+        "beat",
+        "-l",
+        "INFO",
+        "-s",
+        "/tmp/celerybeat-schedule",
+      ]
+
 volumes:
   pgdata:
   redisdata:
