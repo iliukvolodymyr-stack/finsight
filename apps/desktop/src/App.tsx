@@ -102,21 +102,23 @@ export default function App() {
   });
 
   const refreshMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (vars: { symbol: string; tf: SupportedTimeframe }) => {
       const res = await apiClient.POST("/api/v1/instruments/{id}/refresh", {
         params: {
-          path: { id: selectedSymbol },
-          query: { timeframe },
+          path: { id: vars.symbol },
+          query: { timeframe: vars.tf },
         },
       });
       return res.data;
     },
-    onSuccess: async (data) => {
-      setRefreshFeedback(`Оновлено ${data?.rows_written ?? 0} барів (${selectedSymbol} ${timeframe})`);
+    onSuccess: async (data, vars) => {
+      setRefreshFeedback(
+        `Оновлено ${data?.rows_written ?? 0} барів (${vars.symbol} ${vars.tf})`
+      );
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["quote", selectedSymbol] }),
-        queryClient.invalidateQueries({ queryKey: ["candles", selectedSymbol, timeframe] }),
-        queryClient.invalidateQueries({ queryKey: ["indicators", selectedSymbol, timeframe] }),
+        queryClient.invalidateQueries({ queryKey: ["quote", vars.symbol] }),
+        queryClient.invalidateQueries({ queryKey: ["candles", vars.symbol, vars.tf] }),
+        queryClient.invalidateQueries({ queryKey: ["indicators", vars.symbol, vars.tf] }),
       ]);
     },
     onError: (err) => {
@@ -344,7 +346,7 @@ export default function App() {
               </div>
 
               <button
-                onClick={() => refreshMutation.mutate()}
+                onClick={() => refreshMutation.mutate({ symbol: selectedSymbol, tf: timeframe })}
                 disabled={refreshMutation.isPending}
                 title="Оновити свічки з біржі (ліміт 1 раз / 60с)"
                 className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition-colors"

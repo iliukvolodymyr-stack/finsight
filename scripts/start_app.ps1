@@ -24,28 +24,41 @@ Write-Host ""
 
 Set-Location "D:\fin_tech"
 
-# 1. Clean existing lingering ports if any
+# 1. Ensure TimescaleDB + Redis containers are running (if Docker is active)
+Write-Host "[1/4] Перевірка Docker (TimescaleDB + Redis)..." -ForegroundColor Green
+try {
+    docker info *> $null
+    if ($LASTEXITCODE -eq 0) {
+        docker compose -f infra/compose/docker-compose.dev.yml up -d --wait *> $null
+    } else {
+        Write-Host "  [!] Docker не запущений — API може не бачити БД." -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "  [!] Docker не знайдено." -ForegroundColor Yellow
+}
+
+# 2. Clean existing lingering ports if any
 Stop-PortProcess 8000
 Stop-PortProcess 5173
 
-# 2. Start Backend API Server
-Write-Host "[1/3] Запуск FastAPI бекенду (порт 8000)..." -ForegroundColor Green
+# 3. Start Backend API Server
+Write-Host "[2/4] Запуск FastAPI бекенду (порт 8000)..." -ForegroundColor Green
 $apiProcess = Start-Process -FilePath "py" `
     -ArgumentList "-3 -m uv run uvicorn --app-dir services/api app.main:app --host 127.0.0.1 --port 8000" `
     -WorkingDirectory "D:\fin_tech" `
     -WindowStyle Hidden `
     -PassThru
 
-# 3. Start Desktop Client Dev Server
-Write-Host "[2/3] Запуск десктопного веб-клієнту (порт 5173)..." -ForegroundColor Green
+# 4. Start Desktop Client Dev Server
+Write-Host "[3/4] Запуск десктопного веб-клієнту (порт 5173)..." -ForegroundColor Green
 $webProcess = Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c pnpm --filter desktop dev --port 5173" `
+    -ArgumentList "/c pnpm --filter desktop dev" `
     -WorkingDirectory "D:\fin_tech" `
     -WindowStyle Hidden `
     -PassThru
 
-# 4. Wait for server readiness
-Write-Host "[3/3] Очікування ініціалізації сервісів..." -ForegroundColor Green
+# 5. Wait for server readiness
+Write-Host "[4/4] Очікування ініціалізації сервісів..." -ForegroundColor Green
 Start-Sleep -Seconds 3
 
 # 5. Open browser
