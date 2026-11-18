@@ -1,12 +1,51 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@finsight/api-client";
 import { apiClient } from "@/lib/api";
-import { formatCurrency, formatDateTime } from "@finsight/shared";
-import { Activity, TrendingUp, ShieldCheck, BarChart3, AlertCircle } from "lucide-react";
+import { formatCurrency, formatDateTime, formatNumber } from "@finsight/shared";
+import {
+  MarketChart,
+  type IndicatorToggles,
+} from "@/components/MarketChart";
+import {
+  Activity,
+  AlertCircle,
+  BarChart3,
+  Clock,
+  RefreshCw,
+  ShieldCheck,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+
+type SupportedTimeframe = "1h" | "1d";
+
+const INDICATOR_CONTROLS: ReadonlyArray<{
+  key: keyof IndicatorToggles;
+  label: string;
+  dotColor: string;
+}> = [
+  { key: "ema20", label: "EMA 20", dotColor: "bg-amber-400" },
+  { key: "ema50", label: "EMA 50", dotColor: "bg-cyan-400" },
+  { key: "ema200", label: "EMA 200", dotColor: "bg-purple-400" },
+  { key: "bb", label: "Bollinger", dotColor: "bg-indigo-400" },
+  { key: "rsi14", label: "RSI 14", dotColor: "bg-sky-400" },
+  { key: "macd", label: "MACD", dotColor: "bg-teal-400" },
+];
 
 export default function App() {
+  const queryClient = useQueryClient();
   const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT");
-  const [timeframe, setTimeframe] = useState("1h");
+  const [timeframe, setTimeframe] = useState<SupportedTimeframe>("1h");
+  const [toggles, setToggles] = useState<IndicatorToggles>({
+    ema20: true,
+    ema50: true,
+    ema200: false,
+    bb: false,
+    rsi14: true,
+    macd: false,
+  });
+  const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
 
   const healthQuery = useQuery({
     queryKey: ["health"],
@@ -14,15 +53,102 @@ export default function App() {
       const res = await apiClient.GET("/health");
       return res.data;
     },
+    refetchInterval: 30_000,
   });
 
   const instrumentsQuery = useQuery({
     queryKey: ["instruments"],
     queryFn: async () => {
       const res = await apiClient.GET("/api/v1/instruments");
-      return res.data || [];
+      return res.data ?? [];
     },
   });
+
+  const quoteQuery = useQuery({
+    queryKey: ["quote", selectedSymbol],
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/instruments/{id}/quote", {
+        params: { path: { id: selectedSymbol } },
+      });
+      return res.data;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const candlesQuery = useQuery({
+    queryKey: ["candles", selectedSymbol, timeframe],
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/instruments/{id}/candles", {
+        params: {
+          path: { id: selectedSymbol },
+          query: { timeframe, limit: 500 },
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const indicatorsQuery = useQuery({
+    queryKey: ["indicators", selectedSymbol, timeframe],
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/instruments/{id}/indicators", {
+        params: {
+          path: { id: selectedSymbol },
+          query: { timeframe, limit: 500 },
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.POST("/api/v1/instruments/{id}/refresh", {
+        params: {
+          path: { id: selectedSymbol },
+          query: { timeframe },
+        },
+      });
+      return res.data;
+    },
+    onSuccess: async (data) => {
+      setRefreshFeedback(`Оновлено ${data?.rows_written ?? 0} барів (${selectedSymbol} ${timeframe})`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["quote", selectedSymbol] }),
+        queryClient.invalidateQueries({ queryKey: ["candles", selectedSymbol, timeframe] }),
+        queryClient.invalidateQueries({ queryKey: ["indicators", selectedSymbol, timeframe] }),
+      ]);
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setRefreshFeedback(err.message);
+      } else if (err instanceof Error) {
+        setRefreshFeedback(err.message);
+      } else {
+        setRefreshFeedback("Помилка оновлення даних");
+      }
+    },
+  });
+
+  const toggleIndicator = (key: keyof IndicatorToggles) => {
+    setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const selectedInstrument = instrumentsQuery.data?.find(
+    (inst) => inst.symbol === selectedSymbol
+  );
+  const candles = candlesQuery.data?.items ?? [];
+  const indicators = indicatorsQuery.data?.items ?? [];
+  const latestIndicator = indicators[indicators.length - 1];
+  const quote = quoteQuery.data;
+  const isPositiveChange = (quote?.change_24h ?? 0) >= 0;
+
+  const chartError =
+    candlesQuery.error instanceof Error
+      ? candlesQuery.error.message
+      : indicatorsQuery.error instanceof Error
+        ? indicatorsQuery.error.message
+        : null;
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-slate-950 text-slate-100 font-sans">
@@ -35,8 +161,8 @@ export default function App() {
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
               FinSight AI
-              <span className="text-xs font-medium px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                v1.1 (C0 Каркас)
+              <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                v1.1 · C1 Живі дані
               </span>
             </h1>
             <p className="text-xs text-slate-400">
@@ -49,11 +175,18 @@ export default function App() {
           <div className="flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
             <div
               className={`w-2 h-2 rounded-full ${
-                healthQuery.data?.status === "ok" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                healthQuery.data?.status === "ok"
+                  ? "bg-emerald-400 animate-pulse"
+                  : "bg-amber-400"
               }`}
             />
             <span className="text-slate-300">
-              API: {healthQuery.isLoading ? "перевірка..." : healthQuery.data?.status === "ok" ? "онлайн" : "офлайн"}
+              API:{" "}
+              {healthQuery.isLoading
+                ? "перевірка..."
+                : healthQuery.data?.status === "ok"
+                  ? "онлайн"
+                  : "офлайн"}
             </span>
           </div>
         </div>
@@ -62,23 +195,33 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 p-6 grid grid-cols-12 gap-6">
         {/* Left Sidebar: Instruments */}
-        <section className="col-span-3 bg-slate-900/40 border border-slate-800 rounded-xl p-4 flex flex-col space-y-4">
+        <section className="col-span-12 lg:col-span-3 xl:col-span-2 bg-slate-900/40 border border-slate-800 rounded-xl p-4 flex flex-col space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-indigo-400" />
-              Активи юніверсу
+              Активи
             </h2>
-            <span className="text-xs text-slate-500">Курсова</span>
+            <span className="text-xs text-slate-500">
+              {instrumentsQuery.data?.length ?? 0} шт.
+            </span>
           </div>
 
           <div className="space-y-2">
             {instrumentsQuery.isLoading ? (
               <div className="text-xs text-slate-500">Завантаження активів...</div>
+            ) : instrumentsQuery.isError ? (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Немає зв&apos;язку з API. Перевірте бекенд на порту 8000.</span>
+              </div>
             ) : (
               instrumentsQuery.data?.map((inst) => (
                 <button
                   key={inst.id}
-                  onClick={() => setSelectedSymbol(inst.symbol)}
+                  onClick={() => {
+                    setSelectedSymbol(inst.symbol);
+                    setRefreshFeedback(null);
+                  }}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-all ${
                     selectedSymbol === inst.symbol
                       ? "bg-indigo-600/20 border border-indigo-500/50 text-white"
@@ -87,7 +230,7 @@ export default function App() {
                 >
                   <div>
                     <div className="font-semibold text-sm text-slate-200">{inst.symbol}</div>
-                    <div className="text-xs text-slate-500">{inst.name}</div>
+                    <div className="text-xs text-slate-500 truncate max-w-[120px]">{inst.name}</div>
                   </div>
                   <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
                     {inst.asset_class}
@@ -96,58 +239,208 @@ export default function App() {
               ))
             )}
           </div>
-        </section>
 
-        {/* Center: Chart Workspace */}
-        <section className="col-span-6 bg-slate-900/40 border border-slate-800 rounded-xl p-6 flex flex-col space-y-4">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-white">{selectedSymbol}</span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  +1.84% (24г)
+          {selectedInstrument && (
+            <div className="mt-auto pt-3 border-t border-slate-800/80 text-xs text-slate-400 space-y-1">
+              <div className="flex justify-between">
+                <span>Біржа:</span>
+                <span className="uppercase font-mono text-slate-300">
+                  {selectedInstrument.exchange}
                 </span>
               </div>
-              <div className="text-xs text-slate-400 mt-1">Останній закритий бар: {formatDateTime(new Date())}</div>
+              <div className="flex justify-between">
+                <span>Валюта:</span>
+                <span className="font-mono text-slate-300">
+                  {selectedInstrument.quote_currency}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Бари на графіку:</span>
+                <span className="font-mono text-slate-300">{candles.length}</span>
+              </div>
             </div>
-
-            {/* Timeframe selector */}
-            <div className="flex bg-slate-800/80 p-1 rounded-lg border border-slate-700 space-x-1">
-              {["1m", "15m", "1h", "4h", "1d"].map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`text-xs px-2.5 py-1 rounded transition-colors ${
-                    timeframe === tf
-                      ? "bg-indigo-600 text-white font-medium"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Chart Placeholder for C1 */}
-          <div className="flex-1 min-h-[350px] bg-slate-950/60 rounded-lg border border-slate-800/60 flex flex-col items-center justify-center p-6 text-center space-y-3">
-            <BarChart3 className="w-10 h-10 text-slate-600" />
-            <div>
-              <h3 className="text-sm font-semibold text-slate-300">Інтерактивний графік Lightweight Charts</h3>
-              <p className="text-xs text-slate-500 max-w-sm mt-1">
-                Каркас M0 готовий. У спринті C1 тут підключаються живі свічки 1h/1d та технічні індикатори (EMA, RSI, MACD).
-              </p>
-            </div>
-          </div>
+          )}
         </section>
 
-        {/* Right Sidebar: ML Forecast & Risk Overview */}
-        <section className="col-span-3 space-y-6">
+        {/* Center: Live Chart Workspace */}
+        <section className="col-span-12 lg:col-span-9 xl:col-span-7 bg-slate-900/40 border border-slate-800 rounded-xl p-5 flex flex-col space-y-4">
+          {/* Quote Header + Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-2xl font-bold text-white">{selectedSymbol}</span>
+                {quote ? (
+                  <>
+                    <span className="text-xl font-mono font-semibold text-slate-100">
+                      {formatCurrency(quote.price, "USD", "en-US")}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded border ${
+                        isPositiveChange
+                          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                          : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                      }`}
+                    >
+                      {isPositiveChange ? (
+                        <TrendingUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <TrendingDown className="w-3.5 h-3.5" />
+                      )}
+                      {isPositiveChange ? "+" : ""}
+                      {quote.change_24h.toFixed(2)}% (24г)
+                    </span>
+                    {quote.stale && (
+                      <span
+                        title="Дані старші за очікуваний бар з урахуванням розкладу біржі"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                      >
+                        <Clock className="w-3 h-3" />
+                        Застаріло
+                      </span>
+                    )}
+                  </>
+                ) : quoteQuery.isLoading ? (
+                  <span className="text-sm text-slate-500">Завантаження котирування...</span>
+                ) : null}
+              </div>
+
+              <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-3">
+                <span>
+                  Останній закритий бар:{" "}
+                  <span className="font-mono text-slate-300">
+                    {quote?.ts ? formatDateTime(quote.ts) : "—"}
+                  </span>
+                </span>
+                {quote && (
+                  <span>
+                    Обсяг (24г):{" "}
+                    <span className="font-mono text-slate-300">
+                      {formatNumber(quote.volume_24h, "en-US", 1)}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Timeframe Selector + Refresh Button */}
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-800/80 p-1 rounded-lg border border-slate-700 space-x-1">
+                {(["1h", "1d"] as const).map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => {
+                      setTimeframe(tf);
+                      setRefreshFeedback(null);
+                    }}
+                    className={`text-xs px-3 py-1 rounded transition-colors ${
+                      timeframe === tf
+                        ? "bg-indigo-600 text-white font-medium"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshMutation.isPending}
+                title="Оновити свічки з біржі (ліміт 1 раз / 60с)"
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition-colors"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+                />
+                Оновити
+              </button>
+            </div>
+          </div>
+
+          {/* Indicator Toggles Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {INDICATOR_CONTROLS.map(({ key, label, dotColor }) => {
+                const active = toggles[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleIndicator(key)}
+                    className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                      active
+                        ? "bg-slate-800 text-slate-100 border-indigo-500/60"
+                        : "bg-slate-900/50 text-slate-500 border-slate-800 hover:text-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${active ? dotColor : "bg-slate-600"}`}
+                    />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {refreshFeedback && (
+              <span className="text-[11px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded">
+                {refreshFeedback}
+              </span>
+            )}
+          </div>
+
+          {/* Lightweight Charts v5 Live Multi-Pane Chart */}
+          <MarketChart
+            candles={candles}
+            indicators={indicators}
+            toggles={toggles}
+            isLoading={candlesQuery.isLoading || indicatorsQuery.isLoading}
+            errorMessage={chartError}
+          />
+
+          {/* Live Indicator Readout Strip */}
+          {latestIndicator && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                <div className="text-slate-500">EMA 20 / 50</div>
+                <div className="font-mono text-slate-200 mt-0.5">
+                  {latestIndicator.ema20 != null ? latestIndicator.ema20.toFixed(2) : "—"} /{" "}
+                  {latestIndicator.ema50 != null ? latestIndicator.ema50.toFixed(2) : "—"}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                <div className="text-slate-500">EMA 200</div>
+                <div className="font-mono text-purple-300 mt-0.5">
+                  {latestIndicator.ema200 != null ? latestIndicator.ema200.toFixed(2) : "—"}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                <div className="text-slate-500">RSI 14</div>
+                <div className="font-mono text-sky-300 mt-0.5">
+                  {latestIndicator.rsi14 != null ? latestIndicator.rsi14.toFixed(2) : "—"}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                <div className="text-slate-500">ATR 14</div>
+                <div className="font-mono text-slate-200 mt-0.5">
+                  {latestIndicator.atr14 != null ? latestIndicator.atr14.toFixed(2) : "—"}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Right Sidebar: Upcoming C2/C3 Panels */}
+        <section className="col-span-12 xl:col-span-3 space-y-6">
           <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2 pb-2 border-b border-slate-800">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-              ML-прогноз (Triple Barrier)
-            </h2>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                ML-прогноз
+              </h2>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                Спринт C2 (демо)
+              </span>
+            </div>
 
             <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
               <div className="flex items-center justify-between">
@@ -157,26 +450,22 @@ export default function App() {
                 </span>
               </div>
               <div className="text-2xl font-black text-emerald-400 mt-2">BUY</div>
-              <div className="text-xs text-slate-400 mt-1">Цільовий коридор: $90,200 – $93,800 (80%)</div>
-            </div>
-
-            <div className="text-xs space-y-1 text-slate-400">
-              <div className="flex justify-between">
-                <span>Модель:</span>
-                <span className="font-mono text-slate-300">LightGBM v0.1.0</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Режим ринку:</span>
-                <span className="font-semibold text-slate-300">Bull (Бичачий)</span>
+              <div className="text-xs text-slate-400 mt-1">
+                Модель LightGBM + Triple Barrier підключається у спринті C2.
               </div>
             </div>
           </div>
 
           <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2 pb-2 border-b border-slate-800">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              Оцінка ризику портфеля
-            </h2>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                Ризик портфеля
+              </h2>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                Спринт C3 (демо)
+              </span>
+            </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
                 <div className="text-slate-500">VaR (95%)</div>
@@ -202,7 +491,7 @@ export default function App() {
       {/* Footer */}
       <footer className="px-6 py-3 border-t border-slate-800/80 bg-slate-900/30 text-xs text-slate-500 flex justify-between items-center">
         <span>Курсова робота → Дипломний проєкт · Спеціальність 122 «Комп&apos;ютерні науки»</span>
-        <span>Point-in-Time · Purged Walk-Forward · FastAPI + TimescaleDB + LightGBM</span>
+        <span>Lightweight Charts v5 · FastAPI + TimescaleDB + Redis</span>
       </footer>
     </div>
   );
