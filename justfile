@@ -15,10 +15,10 @@ down:
     docker compose -f infra/compose/docker-compose.dev.yml down
 
 migrate:
-    py -3 -m uv run --package finsight-api alembic upgrade head
+    Push-Location services/api; py -3 -m uv run alembic upgrade head; Pop-Location
 
 migration msg:
-    py -3 -m uv run --package finsight-api alembic revision --autogenerate -m "{{msg}}"
+    Push-Location services/api; py -3 -m uv run alembic revision --autogenerate -m "{{msg}}"; Pop-Location
 
 seed:
     py -3 -m uv run python scripts/seed.py

@@ -159,6 +159,7 @@ CREATE TABLE candles (
     high          double precision NOT NULL,
     low           double precision NOT NULL,
     close         double precision NOT NULL,
+    adjusted_close double precision,
     volume        double precision NOT NULL,
     quote_volume  double precision,
     trades        integer,
@@ -204,6 +205,7 @@ SELECT add_compression_policy('candles', INTERVAL '90 days');
 | `timeframe` | text NULL | |
 | `started_at`, `finished_at` | timestamptz | |
 | `rows_written` | integer | |
+| `rows_rejected` | integer | Відхилені data gates бари/записи (не відкидаються мовчки) |
 | `gaps_found` | integer | |
 | `status` | text | `running`,`ok`,`partial`,`failed` |
 | `error` | text NULL | |

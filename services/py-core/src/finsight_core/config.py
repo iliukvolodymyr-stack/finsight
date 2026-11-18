@@ -1,13 +1,16 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(_ROOT_ENV, ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -26,8 +29,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_TTL_DAYS: int = 30
 
     # Data & Storage
-    DATABASE_URL: str = "postgresql+asyncpg://finsight:finsight@localhost:5432/finsight"
-    REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URL: str = "postgresql+asyncpg://finsight:finsight@127.0.0.1:5433/finsight"
+    REDIS_URL: str = "redis://127.0.0.1:6379/0"
     STORAGE_BACKEND: Literal["local", "s3"] = "local"
     ARTIFACTS_DIR: str = "./var/artifacts"
     S3_ENDPOINT: str = "http://localhost:9000"
