@@ -564,7 +564,7 @@
           "Candles & Indicators"
         ],
         "summary": "Get Indicators",
-        "description": "Compute technical indicators on closed bars only using finsight_ml.features.indicators,\npre-loading INDICATOR_WARMUP_BARS (250) bars prior to the window so EMA200 is warmed up.",
+        "description": "Compute technical indicators on closed bars only using finsight_ml.features.indicators,\npre-loading INDICATOR_WARMUP_BARS (500) bars prior to the window so EMA200 is warmed up.",
         "operationId": "get_indicators_api_v1_instruments__id__indicators_get",
         "parameters": [
           {

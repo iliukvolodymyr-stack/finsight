@@ -65,7 +65,7 @@ lint:
     pnpm lint
 
 typecheck:
-    py -3 -m uv run mypy services/api/app services/ml/src
+    py -3 -m uv run mypy -p app -p finsight_ml
     pnpm typecheck
 
 ci:

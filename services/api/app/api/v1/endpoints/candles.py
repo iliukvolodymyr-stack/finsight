@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/instruments", tags=["Candles & Indicators"])
 
-INDICATOR_WARMUP_BARS = 250
+INDICATOR_WARMUP_BARS = 500
 
 
 class CandleItem(BaseModel):
@@ -107,19 +107,22 @@ async def get_candles(
         stmt = stmt.where(CandleModel.open_time <= to_dt)
 
     if from_dt is None:
-        # Default chart view: latest `limit` bars returned in ascending chronological order
+        # Default chart view: latest `limit` bars returned in ascending chronological order.
+        # next_cursor points to the (limit+1)-th older bar so `to=next_cursor` has zero overlap.
         stmt = stmt.order_by(CandleModel.open_time.desc()).limit(limit + 1)
         rows = list((await session.execute(stmt)).scalars().all())
         has_more = len(rows) > limit
+        next_cursor = to_iso_utc(rows[limit].open_time) if has_more else None
         rows = rows[:limit]
         rows.reverse()
-        next_cursor = to_iso_utc(rows[0].open_time) if (has_more and rows) else None
     else:
+        # Forward pagination: next_cursor points to the (limit+1)-th bar so `from=next_cursor`
+        # starts cleanly on the next bar with zero overlap.
         stmt = stmt.order_by(CandleModel.open_time.asc()).limit(limit + 1)
         rows = list((await session.execute(stmt)).scalars().all())
         has_more = len(rows) > limit
+        next_cursor = to_iso_utc(rows[limit].open_time) if has_more else None
         rows = rows[:limit]
-        next_cursor = to_iso_utc(rows[-1].open_time) if (has_more and rows) else None
 
     items = [
         CandleItem(
@@ -156,7 +159,7 @@ async def get_indicators(
 ) -> IndicatorsResponse:
     """
     Compute technical indicators on closed bars only using finsight_ml.features.indicators,
-    pre-loading INDICATOR_WARMUP_BARS (250) bars prior to the window so EMA200 is warmed up.
+    pre-loading INDICATOR_WARMUP_BARS (500) bars prior to the window so EMA200 is warmed up.
     """
     inst = await resolve_instrument(session, id)
 

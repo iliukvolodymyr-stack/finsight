@@ -1,3 +1,5 @@
+import inspect
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -18,6 +20,14 @@ router = APIRouter(prefix="/instruments", tags=["Instruments"])
 
 REFRESH_COOLDOWN_SEC = 60
 REFRESH_LOCK_TTL_SEC = 60
+
+_RELEASE_LOCK_LUA = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+"""
 
 
 class InstrumentResponse(BaseModel):
@@ -200,11 +210,20 @@ async def refresh_instrument(
     current_user: CurrentUser = Depends(get_current_user),
 ) -> RefreshResponse:
     """Force incremental candle refresh with Redis distributed lock and 60s cooldown."""
+    if current_user.role != "admin":
+        raise AppException(
+            status_code=403,
+            code="FORBIDDEN",
+            title="Forbidden",
+            detail="Admin role is required to trigger market data refresh.",
+        )
+
     inst = await resolve_instrument(session, id)
     redis = get_redis()
 
     cooldown_key = f"ratelimit:refresh:{inst.id}:{timeframe}"
     lock_key = f"lock:refresh:{inst.id}:{timeframe}"
+    lock_token = str(uuid.uuid4())
 
     ttl = await redis.ttl(cooldown_key)
     if ttl and ttl > 0:
@@ -213,7 +232,7 @@ async def refresh_instrument(
             detail=f"Refresh for {inst.symbol} ({timeframe}) is rate-limited. Retry in {ttl}s.",
         )
 
-    acquired = await redis.set(lock_key, current_user.id, nx=True, ex=REFRESH_LOCK_TTL_SEC)
+    acquired = await redis.set(lock_key, lock_token, nx=True, ex=REFRESH_LOCK_TTL_SEC)
     if not acquired:
         raise AppException(
             status_code=409,
@@ -241,4 +260,6 @@ async def refresh_instrument(
             rows_rejected=summary.rows_rejected,
         )
     finally:
-        await redis.delete(lock_key)
+        release_res = redis.eval(_RELEASE_LOCK_LUA, 1, lock_key, lock_token)
+        if inspect.isawaitable(release_res):
+            await release_res
