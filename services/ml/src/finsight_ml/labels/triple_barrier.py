@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -50,6 +51,7 @@ def evaluate_barrier_path(
     entry_pos: int,
     horizon_bars: int,
     check_gap_open: bool = True,
+    conservative_side: Literal["LONG", "SHORT"] = "LONG",
 ) -> BarrierOutcome:
     """
     Shared deterministic barrier evaluator used by both Triple Barrier labeling
@@ -60,19 +62,26 @@ def evaluate_barrier_path(
     - On bars after entry (j > entry_pos), checks gap-open breaches first when
       `check_gap_open=True`.
     - Checks intrabar high/low touches with conservative SL-first tie-break if
-      both barriers are hit within the same bar.
+      both barriers are hit within the same bar (`barrier_down` is SL for LONG,
+      `barrier_up` is SL for SHORT).
     - If neither barrier is touched within H bars, exits at vertical barrier
-      on close[entry_pos + horizon_bars - 1].
+      on close[min(entry_pos + horizon_bars - 1, len(close_arr) - 1)].
     """
     end_pos = min(entry_pos + horizon_bars - 1, len(close_arr) - 1)
 
     for j in range(entry_pos, end_pos + 1):
         if check_gap_open and j > entry_pos:
             o_j = float(open_arr[j])
-            if o_j <= barrier_down:
-                return BarrierOutcome(-1.0, j, o_j, "sl")
-            if o_j >= barrier_up:
-                return BarrierOutcome(1.0, j, o_j, "pt")
+            if conservative_side == "LONG":
+                if o_j <= barrier_down:
+                    return BarrierOutcome(-1.0, j, o_j, "sl")
+                if o_j >= barrier_up:
+                    return BarrierOutcome(1.0, j, o_j, "pt")
+            else:
+                if o_j >= barrier_up:
+                    return BarrierOutcome(1.0, j, o_j, "sl")
+                if o_j <= barrier_down:
+                    return BarrierOutcome(-1.0, j, o_j, "pt")
 
         h_j = float(high_arr[j])
         l_j = float(low_arr[j])
@@ -80,11 +89,15 @@ def evaluate_barrier_path(
         touch_down = l_j <= barrier_down
 
         if touch_up and touch_down:
-            return BarrierOutcome(-1.0, j, barrier_down, "sl")
+            if conservative_side == "LONG":
+                return BarrierOutcome(-1.0, j, barrier_down, "sl")
+            return BarrierOutcome(1.0, j, barrier_up, "sl")
         if touch_up:
-            return BarrierOutcome(1.0, j, barrier_up, "pt")
+            reason = "pt" if conservative_side == "LONG" else "sl"
+            return BarrierOutcome(1.0, j, barrier_up, reason)
         if touch_down:
-            return BarrierOutcome(-1.0, j, barrier_down, "sl")
+            reason = "sl" if conservative_side == "LONG" else "pt"
+            return BarrierOutcome(-1.0, j, barrier_down, reason)
 
     return BarrierOutcome(0.0, end_pos, float(close_arr[end_pos]), "vertical")
 
