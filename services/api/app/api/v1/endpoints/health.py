@@ -1,10 +1,11 @@
 import asyncio
 
 from app.infra.db import engine
+from app.infra.models import ModelVersionModel
 from app.infra.redis import get_redis
 from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 
 router = APIRouter(tags=["Health"])
 
@@ -17,6 +18,7 @@ class ReadyResponse(BaseModel):
     status: str
     database: str
     redis: str
+    production_models: int = 0
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -28,14 +30,24 @@ async def health_check() -> HealthResponse:
 async def readiness_check() -> ReadyResponse:
     db_status = "disconnected"
     redis_status = "disconnected"
+    prod_count = 0
 
     try:
         async with asyncio.timeout(1.0):
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
                 db_status = "connected"
+                cnt = (
+                    await conn.execute(
+                        select(func.count())
+                        .select_from(ModelVersionModel)
+                        .where(ModelVersionModel.status == "production")
+                    )
+                ).scalar_one()
+                prod_count = int(cnt or 0)
     except Exception:
-        db_status = "disconnected"
+        if db_status != "connected":
+            db_status = "disconnected"
 
     try:
         async with asyncio.timeout(1.0):
@@ -50,4 +62,5 @@ async def readiness_check() -> ReadyResponse:
         status=overall,
         database=db_status,
         redis=redis_status,
+        production_models=prod_count,
     )

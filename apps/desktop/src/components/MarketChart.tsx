@@ -7,9 +7,11 @@ import {
   LineSeries,
   LineStyle,
   createChart,
+  createSeriesMarkers,
   type CandlestickData,
   type HistogramData,
   type LineData,
+  type SeriesMarker,
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { components } from "@finsight/api-client";
@@ -17,6 +19,7 @@ import { AlertCircle, BarChart3, Loader2 } from "lucide-react";
 
 export type CandleItem = components["schemas"]["CandleItem"];
 export type IndicatorPoint = components["schemas"]["IndicatorPoint"];
+export type PredictionItem = components["schemas"]["PredictionResponse"];
 
 export interface IndicatorToggles {
   ema20: boolean;
@@ -30,6 +33,8 @@ export interface IndicatorToggles {
 export interface MarketChartProps {
   candles: CandleItem[];
   indicators: IndicatorPoint[];
+  signals?: PredictionItem[];
+  showSignals?: boolean;
   toggles: IndicatorToggles;
   isLoading: boolean;
   errorMessage?: string | null;
@@ -56,6 +61,8 @@ function buildLineSeriesData(
 export function MarketChart({
   candles,
   indicators,
+  signals = [],
+  showSignals = true,
   toggles,
   isLoading,
   errorMessage,
@@ -123,6 +130,28 @@ export function MarketChart({
       close: c.c,
     }));
     candleSeries.setData(candleData);
+
+    if (showSignals && signals.length > 0 && candleData.length > 0) {
+      const candleTimes = new Set<number>(candleData.map((c) => Number(c.time)));
+      const markers: SeriesMarker<UTCTimestamp>[] = signals
+        .filter((s) => s.signal === "BUY" || s.signal === "SELL")
+        .map((s) => ({
+          ts: toUtcTimestamp(s.as_of),
+          item: s,
+        }))
+        .filter(({ ts }) => candleTimes.has(Number(ts)))
+        .sort((a, b) => Number(a.ts) - Number(b.ts))
+        .map(({ ts, item }) => ({
+          time: ts,
+          position: item.signal === "BUY" ? "belowBar" : "aboveBar",
+          color: item.signal === "BUY" ? "#10b981" : "#f43f5e",
+          shape: item.signal === "BUY" ? "arrowUp" : "arrowDown",
+          text: `${item.signal} ${(item.confidence * 100).toFixed(0)}%`,
+        }));
+      if (markers.length > 0) {
+        createSeriesMarkers(candleSeries, markers);
+      }
+    }
 
     const volumeSeries = chart.addSeries(
       HistogramSeries,
@@ -307,7 +336,7 @@ export function MarketChart({
       observer.disconnect();
       chart.remove();
     };
-  }, [candles, indicators, toggles, chartHeight]);
+  }, [candles, indicators, signals, showSignals, toggles, chartHeight]);
 
   if (errorMessage) {
     return (

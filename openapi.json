@@ -732,6 +732,165 @@
         }
       }
     },
+    "/api/v1/predictions/history": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "List Prediction History",
+        "operationId": "list_prediction_history_api_v1_predictions_history_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2000,
+              "minimum": 1,
+              "default": 300,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PredictionResponse"
+                  },
+                  "title": "Response List Prediction History Api V1 Predictions History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/run": {
+      "post": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Trigger Inference",
+        "operationId": "trigger_inference_api_v1_predictions_run_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunInferenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/predictions/{id}": {
       "get": {
         "tags": [
@@ -1067,6 +1226,432 @@
           }
         }
       }
+    },
+    "/api/v1/backtests/{id}": {
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "summary": "Get Backtest Detail",
+        "operationId": "get_backtest_detail_api_v1_backtests__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/{id}/equity": {
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "summary": "Get Backtest Equity",
+        "operationId": "get_backtest_equity_api_v1_backtests__id__equity_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestEquityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/{id}/trades": {
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "summary": "Get Backtest Trades",
+        "operationId": "get_backtest_trades_api_v1_backtests__id__trades_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestTradesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtests/{id}/folds": {
+      "get": {
+        "tags": [
+          "Backtests"
+        ],
+        "summary": "Get Backtest Folds",
+        "operationId": "get_backtest_folds_api_v1_backtests__id__folds_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestFoldItem"
+                  },
+                  "title": "Response Get Backtest Folds Api V1 Backtests  Id  Folds Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{id}": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Get Job Status",
+        "operationId": "get_job_status_api_v1_jobs__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Cancel Job",
+        "operationId": "cancel_job_api_v1_jobs__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "tags": [
+          "Models"
+        ],
+        "summary": "List Models",
+        "operationId": "list_models_api_v1_models_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelVersionResponse"
+                  },
+                  "title": "Response List Models Api V1 Models Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1093,7 +1678,27 @@
         ],
         "title": "AuthResponse"
       },
-      "BacktestSummaryResponse": {
+      "BacktestCosts": {
+        "properties": {
+          "fee_bps": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Fee Bps",
+            "default": 10.0
+          },
+          "slippage_bps": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Slippage Bps",
+            "default": 5.0
+          }
+        },
+        "type": "object",
+        "title": "BacktestCosts"
+      },
+      "BacktestDetailResponse": {
         "properties": {
           "id": {
             "type": "string",
@@ -1103,9 +1708,40 @@
             "type": "string",
             "title": "Name"
           },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "period_start": {
+            "type": "string",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
           },
           "sharpe": {
             "anyOf": [
@@ -1140,6 +1776,349 @@
             ],
             "title": "Win Rate"
           },
+          "total_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Return"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
+          "trades_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trades Count"
+          },
+          "instrument_scope": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Instrument Scope"
+          },
+          "strategy_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Strategy Config"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "mode",
+          "status",
+          "timeframe",
+          "period_start",
+          "period_end",
+          "created_at",
+          "instrument_scope",
+          "strategy_config",
+          "metrics"
+        ],
+        "title": "BacktestDetailResponse"
+      },
+      "BacktestEquityResponse": {
+        "properties": {
+          "backtest_id": {
+            "type": "string",
+            "title": "Backtest Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EquityPoint"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backtest_id",
+          "items"
+        ],
+        "title": "BacktestEquityResponse"
+      },
+      "BacktestFoldItem": {
+        "properties": {
+          "fold_no": {
+            "type": "integer",
+            "title": "Fold No"
+          },
+          "train_start": {
+            "type": "string",
+            "title": "Train Start"
+          },
+          "train_end": {
+            "type": "string",
+            "title": "Train End"
+          },
+          "val_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Val Start"
+          },
+          "val_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Val End"
+          },
+          "test_start": {
+            "type": "string",
+            "title": "Test Start"
+          },
+          "test_end": {
+            "type": "string",
+            "title": "Test End"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fold_no",
+          "train_start",
+          "train_end",
+          "test_start",
+          "test_end",
+          "metrics"
+        ],
+        "title": "BacktestFoldItem"
+      },
+      "BacktestPeriod": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "BacktestPeriod"
+      },
+      "BacktestStrategyParams": {
+        "properties": {
+          "entry_threshold": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.95,
+                "minimum": 0.33
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Threshold",
+            "default": 0.55
+          },
+          "min_margin": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.0,
+            "title": "Min Margin",
+            "default": 0.1
+          },
+          "exit_mode": {
+            "type": "string",
+            "title": "Exit Mode",
+            "default": "label_barriers"
+          },
+          "position_size": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Position Size",
+            "default": 1.0
+          },
+          "max_holding_bars": {
+            "type": "integer",
+            "maximum": 240.0,
+            "minimum": 1.0,
+            "title": "Max Holding Bars",
+            "default": 24
+          },
+          "pt_mult": {
+            "type": "number",
+            "maximum": 5.0,
+            "exclusiveMinimum": 0.1,
+            "title": "Pt Mult",
+            "default": 1.0
+          },
+          "sl_mult": {
+            "type": "number",
+            "maximum": 5.0,
+            "exclusiveMinimum": 0.1,
+            "title": "Sl Mult",
+            "default": 1.0
+          },
+          "allow_short": {
+            "type": "boolean",
+            "title": "Allow Short",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "BacktestStrategyParams"
+      },
+      "BacktestSummaryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "period_start": {
+            "type": "string",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          },
+          "max_drawdown": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Drawdown"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          },
+          "total_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Return"
+          },
+          "profit_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Factor"
+          },
           "trades_count": {
             "anyOf": [
               {
@@ -1156,9 +2135,120 @@
         "required": [
           "id",
           "name",
-          "status"
+          "mode",
+          "status",
+          "timeframe",
+          "period_start",
+          "period_end",
+          "created_at"
         ],
         "title": "BacktestSummaryResponse"
+      },
+      "BacktestTradeItem": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "entry_at": {
+            "type": "string",
+            "title": "Entry At"
+          },
+          "entry_price": {
+            "type": "number",
+            "title": "Entry Price"
+          },
+          "exit_at": {
+            "type": "string",
+            "title": "Exit At"
+          },
+          "exit_price": {
+            "type": "number",
+            "title": "Exit Price"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          },
+          "pnl": {
+            "type": "number",
+            "title": "Pnl"
+          },
+          "exit_reason": {
+            "type": "string",
+            "title": "Exit Reason"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "fold_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fold No"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "side",
+          "entry_at",
+          "entry_price",
+          "exit_at",
+          "exit_price",
+          "quantity",
+          "fee",
+          "pnl",
+          "exit_reason"
+        ],
+        "title": "BacktestTradeItem"
+      },
+      "BacktestTradesResponse": {
+        "properties": {
+          "backtest_id": {
+            "type": "string",
+            "title": "Backtest Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BacktestTradeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backtest_id",
+          "total",
+          "items"
+        ],
+        "title": "BacktestTradesResponse"
       },
       "CandleItem": {
         "properties": {
@@ -1265,6 +2355,8 @@
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Name"
           },
           "instrument_ids": {
@@ -1272,6 +2364,8 @@
               "type": "string"
             },
             "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
             "title": "Instrument Ids"
           },
           "timeframe": {
@@ -1280,11 +2374,7 @@
             "default": "1h"
           },
           "period": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Period"
+            "$ref": "#/components/schemas/BacktestPeriod"
           },
           "mode": {
             "type": "string",
@@ -1292,28 +2382,17 @@
             "default": "walk_forward_retrain"
           },
           "strategy": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Strategy"
+            "$ref": "#/components/schemas/BacktestStrategyParams"
           },
           "costs": {
-            "additionalProperties": {
-              "type": "number"
-            },
-            "type": "object",
-            "title": "Costs",
-            "default": {
-              "fee_bps": 10.0,
-              "slippage_bps": 5.0
-            }
+            "$ref": "#/components/schemas/BacktestCosts"
           }
         },
         "type": "object",
         "required": [
           "name",
           "instrument_ids",
-          "period",
-          "strategy"
+          "period"
         ],
         "title": "CreateBacktestRequest"
       },
@@ -1323,15 +2402,20 @@
             "type": "string",
             "title": "Job Id"
           },
+          "backtest_id": {
+            "type": "string",
+            "title": "Backtest Id"
+          },
           "estimated_seconds": {
             "type": "integer",
             "title": "Estimated Seconds",
-            "default": 60
+            "default": 90
           }
         },
         "type": "object",
         "required": [
-          "job_id"
+          "job_id",
+          "backtest_id"
         ],
         "title": "CreateBacktestResponse"
       },
@@ -1353,6 +2437,40 @@
         ],
         "title": "CreatePortfolioRequest"
       },
+      "EquityPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T"
+          },
+          "strategy": {
+            "type": "number",
+            "title": "Strategy"
+          },
+          "benchmark": {
+            "type": "number",
+            "title": "Benchmark"
+          },
+          "ema_crossover": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema Crossover"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "strategy",
+          "benchmark"
+        ],
+        "title": "EquityPoint"
+      },
       "ExplanationItem": {
         "properties": {
           "feature": {
@@ -1362,6 +2480,11 @@
           "contribution": {
             "type": "number",
             "title": "Contribution"
+          },
+          "scale": {
+            "type": "string",
+            "title": "Scale",
+            "default": "raw_log_odds"
           }
         },
         "type": "object",
@@ -1609,6 +2732,84 @@
         ],
         "title": "InstrumentResponse"
       },
+      "JobStatusResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "progress",
+          "created_at"
+        ],
+        "title": "JobStatusResponse"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -1630,19 +2831,140 @@
       },
       "ModelInfo": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
-            "title": "Name",
-            "default": "meta_ensemble"
+            "title": "Name"
           },
           "version": {
             "type": "string",
-            "title": "Version",
-            "default": "1.0.0"
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "production"
           }
         },
         "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
         "title": "ModelInfo"
+      },
+      "ModelVersionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "task": {
+            "type": "string",
+            "title": "Task"
+          },
+          "algo": {
+            "type": "string",
+            "title": "Algo"
+          },
+          "semver": {
+            "type": "string",
+            "title": "Semver"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          },
+          "train_data_end": {
+            "type": "string",
+            "title": "Train Data End"
+          },
+          "trained_at": {
+            "type": "string",
+            "title": "Trained At"
+          },
+          "promoted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promoted At"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "task",
+          "algo",
+          "semver",
+          "status",
+          "train_data_end",
+          "trained_at",
+          "metrics"
+        ],
+        "title": "ModelVersionResponse"
       },
       "PortfolioResponse": {
         "properties": {
@@ -1674,6 +2996,10 @@
       },
       "PredictionResponse": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "instrument_id": {
             "type": "string",
             "title": "Instrument Id"
@@ -1715,22 +3041,29 @@
           "model": {
             "$ref": "#/components/schemas/ModelInfo"
           },
-          "regime": {
-            "type": "string",
-            "title": "Regime",
-            "default": "bull"
+          "component_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Component Versions"
           },
           "explanation": {
             "items": {
               "$ref": "#/components/schemas/ExplanationItem"
             },
             "type": "array",
-            "title": "Explanation",
-            "default": []
+            "title": "Explanation"
+          },
+          "explanation_scale": {
+            "type": "string",
+            "title": "Explanation Scale",
+            "default": "raw_log_odds"
           }
         },
         "type": "object",
         "required": [
+          "id",
           "instrument_id",
           "symbol",
           "timeframe",
@@ -1818,6 +3151,11 @@
           "redis": {
             "type": "string",
             "title": "Redis"
+          },
+          "production_models": {
+            "type": "integer",
+            "title": "Production Models",
+            "default": 0
           }
         },
         "type": "object",
@@ -1927,6 +3265,24 @@
           "risk_level"
         ],
         "title": "RiskSnapshotResponse"
+      },
+      "RunInferenceRequest": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe",
+            "default": "1h"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id"
+        ],
+        "title": "RunInferenceRequest"
       },
       "UserResponse": {
         "properties": {

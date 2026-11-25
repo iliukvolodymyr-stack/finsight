@@ -10,6 +10,7 @@ from app.core.errors import (
 )
 from app.infra.db import engine
 from app.infra.redis import close_redis
+from app.services.job_runner import reconcile_stale_jobs
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging(settings.LOG_LEVEL)
+    await reconcile_stale_jobs()
     yield
     await close_redis()
     await engine.dispose()

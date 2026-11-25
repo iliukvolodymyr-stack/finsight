@@ -232,6 +232,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/predictions/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Prediction History */
+        get: operations["list_prediction_history_api_v1_predictions_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predictions/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Inference */
+        post: operations["trigger_inference_api_v1_predictions_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/predictions/{id}": {
         parameters: {
             query?: never;
@@ -302,6 +336,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/backtests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Backtest Detail */
+        get: operations["get_backtest_detail_api_v1_backtests__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/{id}/equity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Backtest Equity */
+        get: operations["get_backtest_equity_api_v1_backtests__id__equity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/{id}/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Backtest Trades */
+        get: operations["get_backtest_trades_api_v1_backtests__id__trades_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/{id}/folds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Backtest Folds */
+        get: operations["get_backtest_folds_api_v1_backtests__id__folds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job Status */
+        get: operations["get_job_status_api_v1_jobs__id__get"];
+        put?: never;
+        post?: never;
+        /** Cancel Job */
+        delete: operations["cancel_job_api_v1_jobs__id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Models */
+        get: operations["list_models_api_v1_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -314,22 +451,210 @@ export interface components {
             /** Refresh Token */
             refresh_token: string;
         };
-        /** BacktestSummaryResponse */
-        BacktestSummaryResponse: {
+        /** BacktestCosts */
+        BacktestCosts: {
+            /**
+             * Fee Bps
+             * @default 10
+             */
+            fee_bps: number;
+            /**
+             * Slippage Bps
+             * @default 5
+             */
+            slippage_bps: number;
+        };
+        /** BacktestDetailResponse */
+        BacktestDetailResponse: {
             /** Id */
             id: string;
             /** Name */
             name: string;
+            /** Mode */
+            mode: string;
             /** Status */
             status: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Period Start */
+            period_start: string;
+            /** Period End */
+            period_end: string;
+            /** Created At */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
             /** Sharpe */
             sharpe?: number | null;
             /** Max Drawdown */
             max_drawdown?: number | null;
             /** Win Rate */
             win_rate?: number | null;
+            /** Total Return */
+            total_return?: number | null;
+            /** Profit Factor */
+            profit_factor?: number | null;
             /** Trades Count */
             trades_count?: number | null;
+            /** Instrument Scope */
+            instrument_scope: string[];
+            /** Strategy Config */
+            strategy_config: {
+                [key: string]: unknown;
+            };
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Error */
+            error?: string | null;
+        };
+        /** BacktestEquityResponse */
+        BacktestEquityResponse: {
+            /** Backtest Id */
+            backtest_id: string;
+            /** Items */
+            items: components["schemas"]["EquityPoint"][];
+        };
+        /** BacktestFoldItem */
+        BacktestFoldItem: {
+            /** Fold No */
+            fold_no: number;
+            /** Train Start */
+            train_start: string;
+            /** Train End */
+            train_end: string;
+            /** Val Start */
+            val_start?: string | null;
+            /** Val End */
+            val_end?: string | null;
+            /** Test Start */
+            test_start: string;
+            /** Test End */
+            test_end: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+        };
+        /** BacktestPeriod */
+        BacktestPeriod: {
+            /** From */
+            from: string;
+            /** To */
+            to: string;
+        };
+        /** BacktestStrategyParams */
+        BacktestStrategyParams: {
+            /**
+             * Entry Threshold
+             * @default 0.55
+             */
+            entry_threshold: number | null;
+            /**
+             * Min Margin
+             * @default 0.1
+             */
+            min_margin: number;
+            /**
+             * Exit Mode
+             * @default label_barriers
+             */
+            exit_mode: string;
+            /**
+             * Position Size
+             * @default 1
+             */
+            position_size: number;
+            /**
+             * Max Holding Bars
+             * @default 24
+             */
+            max_holding_bars: number;
+            /**
+             * Pt Mult
+             * @default 1
+             */
+            pt_mult: number;
+            /**
+             * Sl Mult
+             * @default 1
+             */
+            sl_mult: number;
+            /**
+             * Allow Short
+             * @default false
+             */
+            allow_short: boolean;
+        };
+        /** BacktestSummaryResponse */
+        BacktestSummaryResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Mode */
+            mode: string;
+            /** Status */
+            status: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Period Start */
+            period_start: string;
+            /** Period End */
+            period_end: string;
+            /** Created At */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Sharpe */
+            sharpe?: number | null;
+            /** Max Drawdown */
+            max_drawdown?: number | null;
+            /** Win Rate */
+            win_rate?: number | null;
+            /** Total Return */
+            total_return?: number | null;
+            /** Profit Factor */
+            profit_factor?: number | null;
+            /** Trades Count */
+            trades_count?: number | null;
+        };
+        /** BacktestTradeItem */
+        BacktestTradeItem: {
+            /** Seq */
+            seq: number;
+            /** Side */
+            side: string;
+            /** Entry At */
+            entry_at: string;
+            /** Entry Price */
+            entry_price: number;
+            /** Exit At */
+            exit_at: string;
+            /** Exit Price */
+            exit_price: number;
+            /** Quantity */
+            quantity: number;
+            /** Fee */
+            fee: number;
+            /** Pnl */
+            pnl: number;
+            /** Exit Reason */
+            exit_reason: string;
+            /** Confidence */
+            confidence?: number | null;
+            /** Fold No */
+            fold_no?: number | null;
+        };
+        /** BacktestTradesResponse */
+        BacktestTradesResponse: {
+            /** Backtest Id */
+            backtest_id: string;
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["BacktestTradeItem"][];
         };
         /** CandleItem */
         CandleItem: {
@@ -382,37 +707,24 @@ export interface components {
              * @default 1h
              */
             timeframe: string;
-            /** Period */
-            period: {
-                [key: string]: string;
-            };
+            period: components["schemas"]["BacktestPeriod"];
             /**
              * Mode
              * @default walk_forward_retrain
              */
             mode: string;
-            /** Strategy */
-            strategy: {
-                [key: string]: unknown;
-            };
-            /**
-             * Costs
-             * @default {
-             *       "fee_bps": 10,
-             *       "slippage_bps": 5
-             *     }
-             */
-            costs: {
-                [key: string]: number;
-            };
+            strategy?: components["schemas"]["BacktestStrategyParams"];
+            costs?: components["schemas"]["BacktestCosts"];
         };
         /** CreateBacktestResponse */
         CreateBacktestResponse: {
             /** Job Id */
             job_id: string;
+            /** Backtest Id */
+            backtest_id: string;
             /**
              * Estimated Seconds
-             * @default 60
+             * @default 90
              */
             estimated_seconds: number;
         };
@@ -426,12 +738,28 @@ export interface components {
              */
             base_currency: string;
         };
+        /** EquityPoint */
+        EquityPoint: {
+            /** T */
+            t: string;
+            /** Strategy */
+            strategy: number;
+            /** Benchmark */
+            benchmark: number;
+            /** Ema Crossover */
+            ema_crossover?: number | null;
+        };
         /** ExplanationItem */
         ExplanationItem: {
             /** Feature */
             feature: string;
             /** Contribution */
             contribution: number;
+            /**
+             * Scale
+             * @default raw_log_odds
+             */
+            scale: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -508,6 +836,29 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** JobStatusResponse */
+        JobStatusResponse: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Status */
+            status: string;
+            /** Progress */
+            progress: number;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Error */
+            error?: string | null;
+            /** Created At */
+            created_at: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -520,16 +871,50 @@ export interface components {
         };
         /** ModelInfo */
         ModelInfo: {
-            /**
-             * Name
-             * @default meta_ensemble
-             */
+            /** Id */
+            id: string;
+            /** Name */
             name: string;
-            /**
-             * Version
-             * @default 1.0.0
-             */
+            /** Version */
             version: string;
+            /**
+             * Status
+             * @default production
+             */
+            status: string;
+        };
+        /** ModelVersionResponse */
+        ModelVersionResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Task */
+            task: string;
+            /** Algo */
+            algo: string;
+            /** Semver */
+            semver: string;
+            /** Status */
+            status: string;
+            /** Instrument Id */
+            instrument_id?: string | null;
+            /** Symbol */
+            symbol?: string | null;
+            /** Timeframe */
+            timeframe?: string | null;
+            /** Train Data End */
+            train_data_end: string;
+            /** Trained At */
+            trained_at: string;
+            /** Promoted At */
+            promoted_at?: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes?: string | null;
         };
         /** PortfolioResponse */
         PortfolioResponse: {
@@ -547,6 +932,8 @@ export interface components {
         };
         /** PredictionResponse */
         PredictionResponse: {
+            /** Id */
+            id: string;
             /** Instrument Id */
             instrument_id: string;
             /** Symbol */
@@ -567,16 +954,17 @@ export interface components {
             };
             price_range: components["schemas"]["PriceRange"];
             model: components["schemas"]["ModelInfo"];
+            /** Component Versions */
+            component_versions?: {
+                [key: string]: string;
+            };
+            /** Explanation */
+            explanation?: components["schemas"]["ExplanationItem"][];
             /**
-             * Regime
-             * @default bull
+             * Explanation Scale
+             * @default raw_log_odds
              */
-            regime: string;
-            /**
-             * Explanation
-             * @default []
-             */
-            explanation: components["schemas"]["ExplanationItem"][];
+            explanation_scale: string;
         };
         /** PriceRange */
         PriceRange: {
@@ -616,6 +1004,11 @@ export interface components {
             database: string;
             /** Redis */
             redis: string;
+            /**
+             * Production Models
+             * @default 0
+             */
+            production_models: number;
         };
         /** RefreshResponse */
         RefreshResponse: {
@@ -658,6 +1051,16 @@ export interface components {
             annual_volatility: number;
             /** Risk Level */
             risk_level: string;
+        };
+        /** RunInferenceRequest */
+        RunInferenceRequest: {
+            /** Instrument Id */
+            instrument_id: string;
+            /**
+             * Timeframe
+             * @default 1h
+             */
+            timeframe: string;
         };
         /** UserResponse */
         UserResponse: {
@@ -1108,6 +1511,76 @@ export interface operations {
             };
         };
     };
+    list_prediction_history_api_v1_predictions_history_get: {
+        parameters: {
+            query: {
+                instrument_id: string;
+                timeframe?: string;
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_inference_api_v1_predictions_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunInferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_prediction_api_v1_predictions__id__get: {
         parameters: {
             query?: never;
@@ -1292,6 +1765,238 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreateBacktestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_backtest_detail_api_v1_backtests__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_backtest_equity_api_v1_backtests__id__equity_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestEquityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_backtest_trades_api_v1_backtests__id__trades_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestTradesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_backtest_folds_api_v1_backtests__id__folds_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestFoldItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_status_api_v1_jobs__id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_job_api_v1_jobs__id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_models_api_v1_models_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionResponse"][];
                 };
             };
             /** @description Validation Error */

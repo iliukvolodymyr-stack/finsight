@@ -2,6 +2,8 @@ from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.backtests import router as backtests_router
 from app.api.v1.endpoints.candles import router as candles_router
 from app.api.v1.endpoints.instruments import router as instruments_router
+from app.api.v1.endpoints.jobs import router as jobs_router
+from app.api.v1.endpoints.models import router as models_router
 from app.api.v1.endpoints.portfolios import router as portfolios_router
 from app.api.v1.endpoints.predictions import router as predictions_router
 from fastapi import APIRouter
@@ -14,3 +16,5 @@ api_v1_router.include_router(candles_router)
 api_v1_router.include_router(predictions_router)
 api_v1_router.include_router(portfolios_router)
 api_v1_router.include_router(backtests_router)
+api_v1_router.include_router(jobs_router)
+api_v1_router.include_router(models_router)
