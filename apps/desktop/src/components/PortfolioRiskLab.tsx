@@ -1,19 +1,50 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError } from "@finsight/api-client";
+import { ApiError, type components } from "@finsight/api-client";
 import { apiClient } from "@/lib/api";
 import { formatCurrency, formatDateTime } from "@finsight/shared";
 import {
   Activity,
   AlertCircle,
   Briefcase,
+  Download,
   Grid3X3,
+  PieChart,
   Plus,
   RotateCcw,
   ShieldCheck,
+  Trash2,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+
+function downloadPositionsCsv(
+  portName: string,
+  items: components["schemas"]["PositionItem"][]
+): void {
+  const header = ["symbol", "asset_class", "quantity", "avg_price", "current_price", "market_value", "cost_basis", "unrealized_pnl", "realized_pnl", "weight"];
+  const rows = items.map((p) =>
+    [
+      p.symbol,
+      p.asset_class,
+      p.quantity,
+      p.avg_price,
+      p.current_price,
+      p.market_value,
+      p.cost_basis,
+      p.unrealized_pnl,
+      p.realized_pnl,
+      p.weight,
+    ].join(",")
+  );
+  const blob = new Blob([[header.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${portName.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_positions.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function corrCellStyle(val: number): { backgroundColor: string; color: string } {
   const clamped = Math.max(-1, Math.min(1, val));
@@ -51,6 +82,8 @@ export function PortfolioRiskLab() {
   const queryClient = useQueryClient();
   const [selectedPortId, setSelectedPortId] = useState<string | null>(null);
   const [corrWindow, setCorrWindow] = useState<"30d" | "90d" | "180d">("90d");
+  const [pnlGroupBy, setPnlGroupBy] = useState<"instrument" | "asset_class">("instrument");
+  const [confirmDeletePortId, setConfirmDeletePortId] = useState<string | null>(null);
   const [newPortName, setNewPortName] = useState("");
   const [showNewPort, setShowNewPort] = useState(false);
 
@@ -125,6 +158,20 @@ export function PortfolioRiskLab() {
     },
   });
 
+  const pnlQuery = useQuery({
+    queryKey: ["portfolio-pnl", activePortId, pnlGroupBy],
+    enabled: activePortId !== null,
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/portfolios/{id}/pnl", {
+        params: {
+          path: { id: activePortId! },
+          query: { period: corrWindow, group_by: pnlGroupBy },
+        },
+      });
+      return res.data;
+    },
+  });
+
   const invalidatePortfolio = async (portId: string | null) => {
     await queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     if (portId) {
@@ -133,6 +180,7 @@ export function PortfolioRiskLab() {
         queryClient.invalidateQueries({ queryKey: ["portfolio-risk", portId] }),
         queryClient.invalidateQueries({ queryKey: ["portfolio-correlation", portId] }),
         queryClient.invalidateQueries({ queryKey: ["portfolio-transactions", portId] }),
+        queryClient.invalidateQueries({ queryKey: ["portfolio-pnl", portId] }),
       ]);
     }
   };
@@ -156,6 +204,28 @@ export function PortfolioRiskLab() {
     onError: (err) => {
       setPortError(
         err instanceof ApiError || err instanceof Error ? err.message : "Не вдалося створити портфель"
+      );
+    },
+  });
+
+  const deletePortfolioMutation = useMutation({
+    mutationFn: async (portId: string) => {
+      await apiClient.DELETE("/api/v1/portfolios/{id}", {
+        params: { path: { id: portId } },
+      });
+      return portId;
+    },
+    onSuccess: async (deletedId) => {
+      setPortError(null);
+      setConfirmDeletePortId(null);
+      if (selectedPortId === deletedId) {
+        setSelectedPortId(null);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    },
+    onError: (err) => {
+      setPortError(
+        err instanceof ApiError || err instanceof Error ? err.message : "Не вдалося видалити портфель"
       );
     },
   });
@@ -315,6 +385,38 @@ export function PortfolioRiskLab() {
                   </button>
                 );
               })}
+              {activePortId && (
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                  {confirmDeletePortId === activePortId ? (
+                    <div className="flex items-center gap-2 w-full justify-between">
+                      <span className="text-rose-300">Архівувати портфель?</span>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => deletePortfolioMutation.mutate(activePortId)}
+                          disabled={deletePortfolioMutation.isPending}
+                          className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white"
+                        >
+                          Так
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeletePortId(null)}
+                          className="px-2 py-0.5 rounded bg-slate-800 text-slate-300"
+                        >
+                          Ні
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeletePortId(activePortId)}
+                      className="inline-flex items-center gap-1 text-slate-500 hover:text-rose-300 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Архівувати обраний
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -594,11 +696,82 @@ export function PortfolioRiskLab() {
           </div>
         </div>
 
+        {/* PnL Breakdown by Instrument / Asset Class */}
+        {pnlQuery.data && (pnlQuery.data.breakdown?.length ?? 0) > 0 && (
+          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+              <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-sky-400" />
+                Деталізація PnL та комісій (Realized:{" "}
+                <span className="font-mono">
+                  {formatCurrency(pnlQuery.data.realized_pnl, displayCurrency, "en-US")}
+                </span>{" "}
+                · Fees:{" "}
+                <span className="font-mono">
+                  {formatCurrency(pnlQuery.data.total_fees, displayCurrency, "en-US")}
+                </span>
+                )
+              </h3>
+              <div className="flex bg-slate-800/80 p-0.5 rounded border border-slate-700 text-[11px]">
+                {(["instrument", "asset_class"] as const).map((grp) => (
+                  <button
+                    key={grp}
+                    onClick={() => setPnlGroupBy(grp)}
+                    className={`px-2 py-0.5 rounded ${
+                      pnlGroupBy === grp
+                        ? "bg-indigo-600 text-white font-medium"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {grp === "instrument" ? "За активом" : "За класом"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              {pnlQuery.data.breakdown.map((b) => {
+                const pos = b.unrealized_pnl >= 0;
+                return (
+                  <div
+                    key={b.key}
+                    className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1 font-mono"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-slate-200 uppercase">{b.key}</span>
+                      <span className={pos ? "text-emerald-400" : "text-rose-400"}>
+                        {pos ? "+" : ""}
+                        {formatCurrency(b.unrealized_pnl, displayCurrency, "en-US")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[11px] text-slate-400">
+                      <span>NAV: {formatCurrency(b.market_value, displayCurrency, "en-US")}</span>
+                      <span>Realized: {formatCurrency(b.realized_pnl, displayCurrency, "en-US")}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Positions Table */}
         <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-slate-200">
-            Відкриті позиції ({positions.length})
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-200">
+              Відкриті позиції ({positions.length})
+            </h3>
+            {positions.length > 0 && (
+              <button
+                onClick={() =>
+                  downloadPositionsCsv(activePortfolio?.name ?? "portfolio", positions)
+                }
+                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+              >
+                <Download className="w-3.5 h-3.5" />
+                CSV
+              </button>
+            )}
+          </div>
           {positions.length === 0 ? (
             <div className="text-xs text-slate-500 py-4">Додайте першу BUY-угоду ліворуч.</div>
           ) : (

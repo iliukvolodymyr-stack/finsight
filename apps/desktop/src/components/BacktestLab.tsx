@@ -10,10 +10,40 @@ import {
   type LineData,
   type UTCTimestamp,
 } from "lightweight-charts";
-import { Activity, AlertCircle, BarChart3, CheckCircle2, Cpu, Play } from "lucide-react";
+import { Activity, AlertCircle, BarChart3, CheckCircle2, Cpu, Download, Play } from "lucide-react";
 
 type EquityPoint = components["schemas"]["EquityPoint"];
 type BacktestMetricDict = Record<string, number | string | boolean | null | undefined>;
+
+function downloadTradesCsv(
+  btName: string,
+  items: components["schemas"]["BacktestTradeItem"][]
+): void {
+  const header = ["seq", "side", "entry_at", "entry_price", "exit_at", "exit_price", "quantity", "fee", "pnl", "exit_reason", "confidence", "fold_no"];
+  const rows = items.map((t) =>
+    [
+      t.seq,
+      t.side,
+      t.entry_at,
+      t.entry_price,
+      t.exit_at,
+      t.exit_price,
+      t.quantity,
+      t.fee,
+      t.pnl,
+      t.exit_reason,
+      t.confidence ?? "",
+      t.fold_no ?? "",
+    ].join(",")
+  );
+  const blob = new Blob([[header.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${btName.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_trades.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function EquityCurveChart({ items }: { items: EquityPoint[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -98,12 +128,14 @@ function EquityCurveChart({ items }: { items: EquityPoint[] }) {
 export function BacktestLab() {
   const queryClient = useQueryClient();
   const [symbol, setSymbol] = useState("BTCUSDT");
+  const [timeframe, setTimeframe] = useState<"1h" | "1d">("1h");
   const [mode, setMode] = useState<"walk_forward_retrain" | "static_model">(
     "walk_forward_retrain"
   );
   const [periodFrom, setPeriodFrom] = useState("2024-11-18");
   const [periodTo, setPeriodTo] = useState("2026-11-18");
   const [entryThreshold, setEntryThreshold] = useState("0.55");
+  const [positionSize, setPositionSize] = useState("1.0");
   const [allowShort, setAllowShort] = useState(false);
   const [selectedBtId, setSelectedBtId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -222,17 +254,17 @@ export function BacktestLab() {
     mutationFn: async () => {
       const res = await apiClient.POST("/api/v1/backtests", {
         body: {
-          name: `${symbol} 1h ${mode === "walk_forward_retrain" ? "Walk-Forward" : "Static OOS"}`,
+          name: `${symbol} ${timeframe} ${mode === "walk_forward_retrain" ? "Walk-Forward" : "Static OOS"}`,
           instrument_ids: [symbol],
-          timeframe: "1h",
+          timeframe,
           period: { from: periodFrom, to: periodTo },
           mode,
           strategy: {
             entry_threshold: Number(entryThreshold) || 0.55,
             min_margin: 0.1,
             exit_mode: "label_barriers",
-            position_size: 1.0,
-            max_holding_bars: 24,
+            position_size: Math.min(1, Math.max(0.1, Number(positionSize) || 1.0)),
+            max_holding_bars: timeframe === "1h" ? 24 : 5,
             pt_mult: 1.0,
             sl_mult: 1.0,
             allow_short: allowShort,
@@ -327,8 +359,8 @@ export function BacktestLab() {
             </label>
           </div>
 
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <label className="flex-1 space-y-1">
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <label className="space-y-1">
               <span className="text-slate-400">Поріг входу</span>
               <input
                 type="number"
@@ -340,16 +372,39 @@ export function BacktestLab() {
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
               />
             </label>
-            <label className="flex items-center gap-2 pt-4 cursor-pointer text-slate-300">
-              <input
-                type="checkbox"
-                checked={allowShort}
-                onChange={(e) => setAllowShort(e.target.checked)}
-                className="rounded border-slate-700"
-              />
-              Allow Short
+            <label className="space-y-1">
+              <span className="text-slate-400">Таймфрейм</span>
+              <select
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value as "1h" | "1d")}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
+              >
+                <option value="1h">1h</option>
+                <option value="1d">1d</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-slate-400">Розмір поз.</span>
+              <select
+                value={positionSize}
+                onChange={(e) => setPositionSize(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
+              >
+                <option value="1.0">100%</option>
+                <option value="0.5">50%</option>
+                <option value="0.25">25%</option>
+              </select>
             </label>
           </div>
+          <label className="flex items-center gap-2 text-xs cursor-pointer text-slate-300">
+            <input
+              type="checkbox"
+              checked={allowShort}
+              onChange={(e) => setAllowShort(e.target.checked)}
+              className="rounded border-slate-700"
+            />
+            Дозволити SHORT-позиції (Perpetual режим)
+          </label>
 
           <div className="text-[11px] text-slate-500">
             Виконання: <span className="font-mono">open[t+1]</span> · Витрати: 10 bps + 5 bps
@@ -475,6 +530,36 @@ export function BacktestLab() {
 
           {/* Strategy vs Baselines Comparison */}
           {typeof strat.sharpe === "number" && (
+            <div className="space-y-3">
+              {(metricsObj.acceptance_a3 || (Array.isArray(detailQuery.data?.metrics?.warnings) && detailQuery.data?.metrics?.warnings.length > 0)) && (
+                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  {metricsObj.acceptance_a3 && (
+                    <>
+                      <span
+                        className={`px-2 py-0.5 rounded border font-mono ${
+                          metricsObj.acceptance_a3.sharpe_gt_zero
+                            ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                            : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                        }`}
+                      >
+                        Sharpe &gt; 0: {metricsObj.acceptance_a3.sharpe_gt_zero ? "PASS" : "FAIL"}
+                      </span>
+                      <span className="px-2 py-0.5 rounded border bg-slate-800/80 text-slate-300 border-slate-700 font-mono">
+                        Фолди &gt; B&amp;H: {String(metricsObj.acceptance_a3.folds_beating_bh_sharpe ?? "—")}
+                      </span>
+                    </>
+                  )}
+                  {Array.isArray(detailQuery.data?.metrics?.warnings) &&
+                    (detailQuery.data.metrics.warnings as string[]).map((w) => (
+                      <span
+                        key={w}
+                        className="px-2 py-0.5 rounded border bg-rose-500/10 text-rose-300 border-rose-500/30 font-mono"
+                      >
+                        {w}
+                      </span>
+                    ))}
+                </div>
+              )}
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">
                 <thead>
@@ -530,6 +615,7 @@ export function BacktestLab() {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           )}
         </div>
@@ -646,9 +732,23 @@ export function BacktestLab() {
 
         {(tradesQuery.data?.items?.length ?? 0) > 0 && (
           <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-200">
-              Останні угоди ({tradesQuery.data?.total ?? 0} всього)
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-200">
+                Останні угоди ({tradesQuery.data?.total ?? 0} всього)
+              </h3>
+              <button
+                onClick={() =>
+                  downloadTradesCsv(
+                    detailQuery.data?.name ?? "backtest",
+                    tradesQuery.data?.items ?? []
+                  )
+                }
+                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+              >
+                <Download className="w-3.5 h-3.5" />
+                CSV
+              </button>
+            </div>
             <div className="overflow-x-auto max-h-[260px]">
               <table className="w-full text-xs text-left border-collapse font-mono">
                 <thead>

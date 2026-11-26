@@ -500,7 +500,13 @@ export default function App() {
               </div>
 
               {refreshFeedback && (
-                <span className="text-[11px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded">
+                <span
+                  className={`text-[11px] px-2.5 py-1 rounded border ${
+                    refreshMutation.isError
+                      ? "text-rose-300 bg-rose-500/10 border-rose-500/30"
+                      : "text-indigo-300 bg-indigo-500/10 border-indigo-500/30"
+                  }`}
+                >
                   {refreshFeedback}
                 </span>
               )}
@@ -577,16 +583,45 @@ export default function App() {
                 </span>
               </div>
               {regimeQuery.data ? (
-                <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
-                  {(["bull", "range", "bear"] as const).map((st) => (
-                    <div key={st} className="p-2 rounded bg-slate-950/60 border border-slate-800">
-                      <div className="text-[10px] uppercase text-slate-500">{st}</div>
-                      <div className="text-slate-200 font-semibold mt-0.5">
-                        {((regimeQuery.data?.probabilities[st] ?? 0) * 100).toFixed(0)}%
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                    {(["bull", "range", "bear"] as const).map((st) => (
+                      <div key={st} className="p-2 rounded bg-slate-950/60 border border-slate-800">
+                        <div className="text-[10px] uppercase text-slate-500">{st}</div>
+                        <div className="text-slate-200 font-semibold mt-0.5">
+                          {((regimeQuery.data?.probabilities[st] ?? 0) * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {(regimeQuery.data.history?.length ?? 0) > 1 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-slate-500">
+                        <span>Історія станів (30д)</span>
+                        <span className="font-mono">{regimeQuery.data.history!.length} точок</span>
+                      </div>
+                      <div className="flex h-2.5 w-full rounded overflow-hidden border border-slate-800 bg-slate-950">
+                        {regimeQuery.data.history!.map((pt) => {
+                          const color =
+                            pt.regime === "bull"
+                              ? "bg-emerald-500/80"
+                              : pt.regime === "bear"
+                                ? "bg-rose-500/80"
+                                : "bg-slate-600/80";
+                          return (
+                            <div
+                              key={pt.t}
+                              className={`flex-1 ${color}`}
+                              title={`${formatDateTime(pt.t)} · ${pt.regime.toUpperCase()} (bull ${((pt.probabilities.bull ?? 0) * 100).toFixed(0)}% / bear ${((pt.probabilities.bear ?? 0) * 100).toFixed(0)}%)`}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
+              ) : regimeQuery.isError ? (
+                <div className="text-xs text-slate-500">Режим ринку недоступний (офлайн API).</div>
               ) : (
                 <div className="text-xs text-slate-500">Завантаження режиму...</div>
               )}

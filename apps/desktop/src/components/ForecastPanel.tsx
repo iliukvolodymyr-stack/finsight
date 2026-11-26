@@ -187,20 +187,51 @@ export function ForecastPanel({ symbol, timeframe, currentPrice }: ForecastPanel
           </div>
 
           {/* Conformal 80% Price Corridor */}
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1.5 text-xs">
+          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-2 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-[11px] text-slate-400">Конформний коридор (80%)</span>
+              <span className="text-[11px] text-slate-400">
+                Коридор ціни ({Math.round(pred.price_range.coverage * 100)}%)
+              </span>
               <span className="text-[10px] font-mono text-indigo-300">H={pred.horizon_bars} барів</span>
             </div>
             <div className="flex items-center justify-between font-mono text-sm">
               <span className="text-rose-300">{formatCurrency(pred.price_range.low, "USD", "en-US")}</span>
-              <span className="text-slate-500 text-xs">
+              <span className="text-slate-400 text-xs">
                 {currentPrice != null ? formatCurrency(currentPrice, "USD", "en-US") : "—"}
               </span>
               <span className="text-emerald-300">
                 {formatCurrency(pred.price_range.high, "USD", "en-US")}
               </span>
             </div>
+            {(() => {
+              const lo = pred.price_range.low;
+              const hi = pred.price_range.high;
+              const mid = currentPrice != null && currentPrice > 0 ? currentPrice : (lo + hi) / 2;
+              const span = hi - lo;
+              const markerPct = span > 0 ? Math.min(96, Math.max(4, ((mid - lo) / span) * 100)) : 50;
+              const widthPct = mid > 0 ? (span / mid) * 100 : 0;
+              const downPct = mid > 0 ? ((lo - mid) / mid) * 100 : 0;
+              const upPct = mid > 0 ? ((hi - mid) / mid) * 100 : 0;
+              return (
+                <div className="space-y-1.5 pt-0.5">
+                  <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-rose-500/60 via-indigo-400/50 to-emerald-500/60 w-full"
+                    />
+                    <div
+                      className="absolute top-0 bottom-0 w-1 bg-white shadow"
+                      style={{ left: `calc(${markerPct.toFixed(1)}% - 2px)` }}
+                      title={`Поточна ціна: ${formatCurrency(mid, "USD", "en-US")}`}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span className="text-rose-300/90">{downPct.toFixed(2)}%</span>
+                    <span>Ширина: {widthPct.toFixed(2)}%</span>
+                    <span className="text-emerald-300/90">+{upPct.toFixed(2)}%</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Native TreeSHAP Top-5 */}
