@@ -1,10 +1,12 @@
 import asyncio
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
 from app.infra.db import AsyncSessionLocal
-from app.infra.models import InstrumentModel, NewsSourceModel, UserModel, new_uuid7
+from app.infra.models import InstrumentModel, NewsSourceModel, PortfolioModel, UserModel, new_uuid7
+from app.services.portfolio import add_portfolio_transaction
 from finsight_core.logging import setup_logging
 from loguru import logger
 from sqlalchemy import select
@@ -123,6 +125,71 @@ async def seed() -> None:
                         )
                     )
                     logger.info("Added news source: {}", src_name)
+
+            await session.flush()
+
+            # 4. Seed 2 demo portfolios idempotently
+            sym_map: dict[str, InstrumentModel] = {
+                inst.symbol: inst
+                for inst in (await session.execute(select(InstrumentModel))).scalars().all()
+            }
+            demo_portfolios = [
+                {
+                    "name": "Main Crypto Portfolio",
+                    "txs": [
+                        ("BTCUSDT", "BUY", 0.35, 68500.0, 23.98, "seed-main-btc-1"),
+                        ("ETHUSDT", "BUY", 4.5, 2650.0, 11.93, "seed-main-eth-1"),
+                    ],
+                },
+                {
+                    "name": "Balanced Multi-Asset",
+                    "txs": [
+                        ("BTCUSDT", "BUY", 0.15, 72000.0, 10.80, "seed-bal-btc-1"),
+                        ("ETHUSDT", "BUY", 2.0, 2800.0, 5.60, "seed-bal-eth-1"),
+                        ("SPY", "BUY", 25.0, 545.0, 1.00, "seed-bal-spy-1"),
+                    ],
+                },
+            ]
+            exec_dt = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
+
+            for p_spec in demo_portfolios:
+                p_name = str(p_spec["name"])
+                port = (
+                    await session.execute(
+                        select(PortfolioModel).where(
+                            PortfolioModel.user_id == demo_user_id,
+                            PortfolioModel.name == p_name,
+                            PortfolioModel.archived_at.is_(None),
+                        )
+                    )
+                ).scalar_one_or_none()
+                if port is None:
+                    port = PortfolioModel(
+                        id=new_uuid7(),
+                        user_id=demo_user_id,
+                        name=p_name,
+                        base_currency="USD",
+                    )
+                    session.add(port)
+                    await session.flush()
+                    logger.info("Added demo portfolio: {}", p_name)
+
+                for sym, side, qty, price, fee, key in p_spec["txs"]:  # type: ignore[attr-defined]
+                    target_inst = sym_map.get(str(sym))
+                    if target_inst is not None:
+                        await add_portfolio_transaction(
+                            session=session,
+                            user_id=demo_user_id,
+                            portfolio_id=port.id,
+                            instrument=target_inst,
+                            side=side,  # type: ignore[arg-type]
+                            quantity=float(qty),
+                            price=float(price),
+                            fee=float(fee),
+                            executed_at=exec_dt,
+                            note="Initial demo seed position",
+                            idempotency_key=str(key),
+                        )
 
             await session.commit()
         logger.info("Seeding complete.")

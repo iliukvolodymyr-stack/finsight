@@ -9,6 +9,7 @@ from app.infra.models import CandleModel, InstrumentModel
 from app.infra.redis import get_redis
 from app.services.ingestion import ingest_instrument_candles
 from app.services.market_queries import resolve_instrument
+from app.services.regime import compute_instrument_regime
 from fastapi import APIRouter, Depends, Query, Response, status
 from finsight_core.time import to_iso_utc
 from finsight_ml.data import is_quote_stale
@@ -56,6 +57,22 @@ class RefreshResponse(BaseModel):
     status: str
     rows_written: int
     rows_rejected: int
+
+
+class RegimeHistoryPoint(BaseModel):
+    t: str
+    regime: str
+    probabilities: dict[str, float]
+
+
+class RegimeResponse(BaseModel):
+    symbol: str
+    timeframe: str
+    regime: str
+    probabilities: dict[str, float]
+    as_of: str | None = None
+    method: str = "causal_gaussian_hmm_3state"
+    history: list[RegimeHistoryPoint] = []
 
 
 def _to_instrument_response(inst: InstrumentModel) -> InstrumentResponse:
@@ -263,3 +280,15 @@ async def refresh_instrument(
         release_res = redis.eval(_RELEASE_LOCK_LUA, 1, lock_key, lock_token)
         if inspect.isawaitable(release_res):
             await release_res
+
+
+@router.get("/{id}/regime", response_model=RegimeResponse)
+async def get_instrument_regime(
+    id: str,
+    timeframe: str = Query("1h"),
+    days: int = Query(30, ge=5, le=365),
+    session: AsyncSession = Depends(get_db_session),
+) -> RegimeResponse:
+    inst = await resolve_instrument(session, id)
+    data = await compute_instrument_regime(session, inst, timeframe=timeframe, days=days)
+    return RegimeResponse(**data)

@@ -461,6 +461,70 @@
         }
       }
     },
+    "/api/v1/instruments/{id}/regime": {
+      "get": {
+        "tags": [
+          "Instruments"
+        ],
+        "summary": "Get Instrument Regime",
+        "operationId": "get_instrument_regime_api_v1_instruments__id__regime_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 5,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instruments/{id}/candles": {
       "get": {
         "tags": [
@@ -1043,13 +1107,13 @@
         }
       }
     },
-    "/api/v1/portfolios/{id}/risk": {
+    "/api/v1/portfolios/{id}": {
       "get": {
         "tags": [
           "Portfolios"
         ],
-        "summary": "Get Portfolio Risk",
-        "operationId": "get_portfolio_risk_api_v1_portfolios__id__risk_get",
+        "summary": "Get Portfolio",
+        "operationId": "get_portfolio_api_v1_portfolios__id__get",
         "parameters": [
           {
             "name": "id",
@@ -1083,7 +1147,615 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "$ref": "#/components/schemas/PortfolioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Update Portfolio",
+        "operationId": "update_portfolio_api_v1_portfolios__id__patch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePortfolioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Delete Portfolio",
+        "operationId": "delete_portfolio_api_v1_portfolios__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/positions": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Get Portfolio Positions",
+        "operationId": "get_portfolio_positions_api_v1_portfolios__id__positions_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioPositionsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/transactions": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "List Portfolio Transactions",
+        "operationId": "list_portfolio_transactions_api_v1_portfolios__id__transactions_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionResponse"
+                  },
+                  "title": "Response List Portfolio Transactions Api V1 Portfolios  Id  Transactions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Create Portfolio Transaction",
+        "operationId": "create_portfolio_transaction_api_v1_portfolios__id__transactions_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/transactions/{tx_id}": {
+      "delete": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Delete Portfolio Transaction",
+        "operationId": "delete_portfolio_transaction_api_v1_portfolios__id__transactions__tx_id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "tx_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tx Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/risk": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Get Portfolio Risk",
+        "operationId": "get_portfolio_risk_api_v1_portfolios__id__risk_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "90d",
+              "title": "Window"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/RiskSnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/pnl": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Get Portfolio Pnl",
+        "operationId": "get_portfolio_pnl_api_v1_portfolios__id__pnl_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "30d",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "instrument",
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioPnlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/{id}/correlation": {
+      "get": {
+        "tags": [
+          "Portfolios"
+        ],
+        "summary": "Get Portfolio Correlation",
+        "operationId": "get_portfolio_correlation_api_v1_portfolios__id__correlation_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "90d",
+              "title": "Window"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1d",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrelationResponse"
                 }
               }
             }
@@ -2351,6 +3023,53 @@
         ],
         "title": "CandleListResponse"
       },
+      "CorrelationResponse": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "window": {
+            "type": "string",
+            "title": "Window"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Symbols"
+          },
+          "matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Matrix"
+          },
+          "observations": {
+            "type": "integer",
+            "title": "Observations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio_id",
+          "timeframe",
+          "window",
+          "symbols",
+          "matrix",
+          "observations"
+        ],
+        "title": "CorrelationResponse"
+      },
       "CreateBacktestRequest": {
         "properties": {
           "name": {
@@ -2423,10 +3142,14 @@
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
             "title": "Name"
           },
           "base_currency": {
             "type": "string",
+            "maxLength": 10,
+            "minLength": 2,
             "title": "Base Currency",
             "default": "USD"
           }
@@ -2436,6 +3159,69 @@
           "name"
         ],
         "title": "CreatePortfolioRequest"
+      },
+      "CreateTransactionRequest": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side"
+          },
+          "quantity": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price"
+          },
+          "fee": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fee",
+            "default": 0.0
+          },
+          "executed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executed At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "side",
+          "quantity",
+          "price"
+        ],
+        "title": "CreateTransactionRequest"
       },
       "EquityPoint": {
         "properties": {
@@ -2966,6 +3752,141 @@
         ],
         "title": "ModelVersionResponse"
       },
+      "PnlBreakdownItem": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "market_value": {
+            "type": "number",
+            "title": "Market Value"
+          },
+          "cost_basis": {
+            "type": "number",
+            "title": "Cost Basis"
+          },
+          "unrealized_pnl": {
+            "type": "number",
+            "title": "Unrealized Pnl"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "market_value",
+          "cost_basis",
+          "unrealized_pnl",
+          "realized_pnl"
+        ],
+        "title": "PnlBreakdownItem"
+      },
+      "PortfolioPnlResponse": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "group_by": {
+            "type": "string",
+            "title": "Group By"
+          },
+          "total_market_value": {
+            "type": "number",
+            "title": "Total Market Value"
+          },
+          "total_cost_basis": {
+            "type": "number",
+            "title": "Total Cost Basis"
+          },
+          "unrealized_pnl": {
+            "type": "number",
+            "title": "Unrealized Pnl"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl"
+          },
+          "total_fees": {
+            "type": "number",
+            "title": "Total Fees"
+          },
+          "breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/PnlBreakdownItem"
+            },
+            "type": "array",
+            "title": "Breakdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio_id",
+          "period",
+          "group_by",
+          "total_market_value",
+          "total_cost_basis",
+          "unrealized_pnl",
+          "realized_pnl",
+          "total_fees",
+          "breakdown"
+        ],
+        "title": "PortfolioPnlResponse"
+      },
+      "PortfolioPositionsResponse": {
+        "properties": {
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id"
+          },
+          "total_market_value": {
+            "type": "number",
+            "title": "Total Market Value"
+          },
+          "total_cost_basis": {
+            "type": "number",
+            "title": "Total Cost Basis"
+          },
+          "total_unrealized_pnl": {
+            "type": "number",
+            "title": "Total Unrealized Pnl"
+          },
+          "total_realized_pnl": {
+            "type": "number",
+            "title": "Total Realized Pnl"
+          },
+          "total_fees": {
+            "type": "number",
+            "title": "Total Fees"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PositionItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio_id",
+          "total_market_value",
+          "total_cost_basis",
+          "total_unrealized_pnl",
+          "total_realized_pnl",
+          "total_fees",
+          "items"
+        ],
+        "title": "PortfolioPositionsResponse"
+      },
       "PortfolioResponse": {
         "properties": {
           "id": {
@@ -2984,6 +3905,42 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "total_value": {
+            "type": "number",
+            "title": "Total Value",
+            "default": 0.0
+          },
+          "total_cost_basis": {
+            "type": "number",
+            "title": "Total Cost Basis",
+            "default": 0.0
+          },
+          "unrealized_pnl": {
+            "type": "number",
+            "title": "Unrealized Pnl",
+            "default": 0.0
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl",
+            "default": 0.0
+          },
+          "positions_count": {
+            "type": "integer",
+            "title": "Positions Count",
+            "default": 0
           }
         },
         "type": "object",
@@ -2993,6 +3950,74 @@
           "created_at"
         ],
         "title": "PortfolioResponse"
+      },
+      "PositionItem": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "avg_price": {
+            "type": "number",
+            "title": "Avg Price"
+          },
+          "current_price": {
+            "type": "number",
+            "title": "Current Price"
+          },
+          "market_value": {
+            "type": "number",
+            "title": "Market Value"
+          },
+          "cost_basis": {
+            "type": "number",
+            "title": "Cost Basis"
+          },
+          "unrealized_pnl": {
+            "type": "number",
+            "title": "Unrealized Pnl"
+          },
+          "unrealized_pnl_pct": {
+            "type": "number",
+            "title": "Unrealized Pnl Pct"
+          },
+          "realized_pnl": {
+            "type": "number",
+            "title": "Realized Pnl"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "asset_class",
+          "quantity",
+          "avg_price",
+          "current_price",
+          "market_value",
+          "cost_basis",
+          "unrealized_pnl",
+          "unrealized_pnl_pct",
+          "realized_pnl",
+          "weight"
+        ],
+        "title": "PositionItem"
       },
       "PredictionResponse": {
         "properties": {
@@ -3199,6 +4224,87 @@
         ],
         "title": "RefreshResponse"
       },
+      "RegimeHistoryPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T"
+          },
+          "regime": {
+            "type": "string",
+            "title": "Regime"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "regime",
+          "probabilities"
+        ],
+        "title": "RegimeHistoryPoint"
+      },
+      "RegimeResponse": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "type": "string",
+            "title": "Timeframe"
+          },
+          "regime": {
+            "type": "string",
+            "title": "Regime"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probabilities"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": "causal_gaussian_hmm_3state"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/RegimeHistoryPoint"
+            },
+            "type": "array",
+            "title": "History",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "timeframe",
+          "regime",
+          "probabilities"
+        ],
+        "title": "RegimeResponse"
+      },
       "RegisterRequest": {
         "properties": {
           "email": {
@@ -3225,6 +4331,28 @@
       },
       "RiskSnapshotResponse": {
         "properties": {
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Id"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
           "var_95": {
             "type": "number",
             "title": "Var 95"
@@ -3252,6 +4380,23 @@
           "risk_level": {
             "type": "string",
             "title": "Risk Level"
+          },
+          "weights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Weights"
+          },
+          "observations": {
+            "type": "integer",
+            "title": "Observations",
+            "default": 0
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": "historical_1d_90d"
           }
         },
         "type": "object",
@@ -3283,6 +4428,102 @@
           "instrument_id"
         ],
         "title": "RunInferenceRequest"
+      },
+      "TransactionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "portfolio_id": {
+            "type": "string",
+            "title": "Portfolio Id"
+          },
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "fee": {
+            "type": "number",
+            "title": "Fee"
+          },
+          "executed_at": {
+            "type": "string",
+            "title": "Executed At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "portfolio_id",
+          "instrument_id",
+          "symbol",
+          "side",
+          "quantity",
+          "price",
+          "fee",
+          "executed_at"
+        ],
+        "title": "TransactionResponse"
+      },
+      "UpdatePortfolioRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "base_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Currency"
+          }
+        },
+        "type": "object",
+        "title": "UpdatePortfolioRequest"
       },
       "UserResponse": {
         "properties": {

@@ -9,10 +9,12 @@ import {
 } from "@/components/MarketChart";
 import { ForecastPanel } from "@/components/ForecastPanel";
 import { BacktestLab } from "@/components/BacktestLab";
+import { PortfolioRiskLab } from "@/components/PortfolioRiskLab";
 import {
   Activity,
   AlertCircle,
   BarChart3,
+  Briefcase,
   Clock,
   FlaskConical,
   RefreshCw,
@@ -22,7 +24,7 @@ import {
 } from "lucide-react";
 
 type SupportedTimeframe = "1h" | "1d";
-type ActiveTab = "market" | "backtest";
+type ActiveTab = "market" | "backtest" | "portfolio";
 
 const INDICATOR_CONTROLS: ReadonlyArray<{
   key: keyof IndicatorToggles;
@@ -123,6 +125,39 @@ export default function App() {
     },
   });
 
+  const regimeQuery = useQuery({
+    queryKey: ["regime", selectedSymbol, timeframe],
+    enabled: activeTab === "market",
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/instruments/{id}/regime", {
+        params: { path: { id: selectedSymbol }, query: { timeframe, days: 30 } },
+      });
+      return res.data;
+    },
+  });
+
+  const portfoliosQuery = useQuery({
+    queryKey: ["portfolios"],
+    enabled: activeTab === "market",
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/portfolios");
+      return res.data ?? [];
+    },
+  });
+
+  const primaryPortfolioId = portfoliosQuery.data?.[0]?.id ?? null;
+
+  const sidebarRiskQuery = useQuery({
+    queryKey: ["portfolio-risk", primaryPortfolioId, "90d"],
+    enabled: activeTab === "market" && primaryPortfolioId !== null,
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/portfolios/{id}/risk", {
+        params: { path: { id: primaryPortfolioId! }, query: { window: "90d" } },
+      });
+      return res.data;
+    },
+  });
+
   const refreshMutation = useMutation({
     mutationFn: async (vars: { symbol: string; tf: SupportedTimeframe }) => {
       const res = await apiClient.POST("/api/v1/instruments/{id}/refresh", {
@@ -185,7 +220,7 @@ export default function App() {
             <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
               FinSight AI
               <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                v1.1 · C2 Прогноз і бектест
+                v1.1 · C3 Ризик і портфель
               </span>
             </h1>
             <p className="text-xs text-slate-400">
@@ -219,6 +254,17 @@ export default function App() {
               <FlaskConical className="w-3.5 h-3.5" />
               Backtest Lab
             </button>
+            <button
+              onClick={() => setActiveTab("portfolio")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+                activeTab === "portfolio"
+                  ? "bg-indigo-600 text-white font-semibold"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              Портфель і ризик
+            </button>
           </nav>
 
           <div className="flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
@@ -244,6 +290,8 @@ export default function App() {
       {/* Main Content Area */}
       {activeTab === "backtest" ? (
         <BacktestLab />
+      ) : activeTab === "portfolio" ? (
+        <PortfolioRiskLab />
       ) : (
         <main className="flex-1 p-6 grid grid-cols-12 gap-6">
           {/* Left Sidebar: Instruments */}
@@ -501,7 +549,7 @@ export default function App() {
             )}
           </section>
 
-          {/* Right Sidebar: Live C2 Forecast + Upcoming C3 Risk */}
+          {/* Right Sidebar: Live C2 Forecast + HMM Regime + C3 Portfolio Risk */}
           <section className="col-span-12 xl:col-span-3 space-y-6">
             <ForecastPanel
               symbol={selectedSymbol}
@@ -509,34 +557,88 @@ export default function App() {
               currentPrice={quote?.price}
             />
 
+            {/* Causal 3-state HMM Regime Card */}
+            <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-sky-400" />
+                  Режим ринку (HMM)
+                </h2>
+                <span
+                  className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${
+                    regimeQuery.data?.regime === "bull"
+                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                      : regimeQuery.data?.regime === "bear"
+                        ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
+                        : "bg-slate-800 text-slate-300 border-slate-700"
+                  }`}
+                >
+                  {regimeQuery.data?.regime ?? "—"}
+                </span>
+              </div>
+              {regimeQuery.data ? (
+                <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                  {(["bull", "range", "bear"] as const).map((st) => (
+                    <div key={st} className="p-2 rounded bg-slate-950/60 border border-slate-800">
+                      <div className="text-[10px] uppercase text-slate-500">{st}</div>
+                      <div className="text-slate-200 font-semibold mt-0.5">
+                        {((regimeQuery.data?.probabilities[st] ?? 0) * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500">Завантаження режиму...</div>
+              )}
+            </div>
+
             <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-indigo-400" />
                   Ризик портфеля
                 </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-                  Спринт C3 (демо)
-                </span>
+                <button
+                  onClick={() => setActiveTab("portfolio")}
+                  className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30"
+                >
+                  Деталі →
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
-                  <div className="text-slate-500">VaR (95%)</div>
-                  <div className="text-base font-bold text-slate-200 mt-1">4.2%</div>
+              {sidebarRiskQuery.data ? (
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
+                    <div className="text-slate-500">VaR (95%)</div>
+                    <div className="text-base font-bold text-amber-300 mt-1 font-mono">
+                      {(sidebarRiskQuery.data.var_95 * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
+                    <div className="text-slate-500">Sharpe Ratio</div>
+                    <div className="text-base font-bold text-emerald-400 mt-1 font-mono">
+                      {sidebarRiskQuery.data.sharpe.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
+                    <div className="text-slate-500">Max Drawdown</div>
+                    <div className="text-base font-bold text-amber-400 mt-1 font-mono">
+                      {(sidebarRiskQuery.data.max_drawdown * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
+                    <div className="text-slate-500">Рівень ризику</div>
+                    <div className="text-base font-bold text-indigo-400 mt-1 capitalize">
+                      {sidebarRiskQuery.data.risk_level}
+                    </div>
+                  </div>
                 </div>
-                <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
-                  <div className="text-slate-500">Sharpe Ratio</div>
-                  <div className="text-base font-bold text-emerald-400 mt-1">1.82</div>
+              ) : (
+                <div className="text-xs text-slate-500">
+                  {portfoliosQuery.data?.length === 0
+                    ? "Створіть портфель у вкладці «Портфель і ризик»."
+                    : "Очікування даних ризику портфеля..."}
                 </div>
-                <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
-                  <div className="text-slate-500">Max Drawdown</div>
-                  <div className="text-base font-bold text-amber-400 mt-1">12.5%</div>
-                </div>
-                <div className="p-2.5 rounded bg-slate-800/40 border border-slate-800">
-                  <div className="text-slate-500">Рівень ризику</div>
-                  <div className="text-base font-bold text-indigo-400 mt-1">Помірний</div>
-                </div>
-              </div>
+              )}
             </div>
           </section>
         </main>

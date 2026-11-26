@@ -177,6 +177,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/instruments/{id}/regime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Instrument Regime */
+        get: operations["get_instrument_regime_api_v1_instruments__id__regime_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/instruments/{id}/candles": {
         parameters: {
             query?: never;
@@ -301,6 +318,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portfolios/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio */
+        get: operations["get_portfolio_api_v1_portfolios__id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Portfolio */
+        delete: operations["delete_portfolio_api_v1_portfolios__id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Portfolio */
+        patch: operations["update_portfolio_api_v1_portfolios__id__patch"];
+        trace?: never;
+    };
+    "/api/v1/portfolios/{id}/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio Positions */
+        get: operations["get_portfolio_positions_api_v1_portfolios__id__positions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolios/{id}/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Portfolio Transactions */
+        get: operations["list_portfolio_transactions_api_v1_portfolios__id__transactions_get"];
+        put?: never;
+        /** Create Portfolio Transaction */
+        post: operations["create_portfolio_transaction_api_v1_portfolios__id__transactions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolios/{id}/transactions/{tx_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Portfolio Transaction */
+        delete: operations["delete_portfolio_transaction_api_v1_portfolios__id__transactions__tx_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolios/{id}/risk": {
         parameters: {
             query?: never;
@@ -310,6 +398,40 @@ export interface paths {
         };
         /** Get Portfolio Risk */
         get: operations["get_portfolio_risk_api_v1_portfolios__id__risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolios/{id}/pnl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio Pnl */
+        get: operations["get_portfolio_pnl_api_v1_portfolios__id__pnl_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolios/{id}/correlation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Portfolio Correlation */
+        get: operations["get_portfolio_correlation_api_v1_portfolios__id__correlation_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -696,6 +818,21 @@ export interface components {
              */
             has_more: boolean;
         };
+        /** CorrelationResponse */
+        CorrelationResponse: {
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Window */
+            window: string;
+            /** Symbols */
+            symbols: string[];
+            /** Matrix */
+            matrix: number[][];
+            /** Observations */
+            observations: number;
+        };
         /** CreateBacktestRequest */
         CreateBacktestRequest: {
             /** Name */
@@ -737,6 +874,29 @@ export interface components {
              * @default USD
              */
             base_currency: string;
+        };
+        /** CreateTransactionRequest */
+        CreateTransactionRequest: {
+            /** Instrument Id */
+            instrument_id: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "BUY" | "SELL";
+            /** Quantity */
+            quantity: number;
+            /** Price */
+            price: number;
+            /**
+             * Fee
+             * @default 0
+             */
+            fee: number;
+            /** Executed At */
+            executed_at?: string | null;
+            /** Note */
+            note?: string | null;
         };
         /** EquityPoint */
         EquityPoint: {
@@ -916,6 +1076,57 @@ export interface components {
             /** Notes */
             notes?: string | null;
         };
+        /** PnlBreakdownItem */
+        PnlBreakdownItem: {
+            /** Key */
+            key: string;
+            /** Market Value */
+            market_value: number;
+            /** Cost Basis */
+            cost_basis: number;
+            /** Unrealized Pnl */
+            unrealized_pnl: number;
+            /** Realized Pnl */
+            realized_pnl: number;
+        };
+        /** PortfolioPnlResponse */
+        PortfolioPnlResponse: {
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Period */
+            period: string;
+            /** Group By */
+            group_by: string;
+            /** Total Market Value */
+            total_market_value: number;
+            /** Total Cost Basis */
+            total_cost_basis: number;
+            /** Unrealized Pnl */
+            unrealized_pnl: number;
+            /** Realized Pnl */
+            realized_pnl: number;
+            /** Total Fees */
+            total_fees: number;
+            /** Breakdown */
+            breakdown: components["schemas"]["PnlBreakdownItem"][];
+        };
+        /** PortfolioPositionsResponse */
+        PortfolioPositionsResponse: {
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Total Market Value */
+            total_market_value: number;
+            /** Total Cost Basis */
+            total_cost_basis: number;
+            /** Total Unrealized Pnl */
+            total_unrealized_pnl: number;
+            /** Total Realized Pnl */
+            total_realized_pnl: number;
+            /** Total Fees */
+            total_fees: number;
+            /** Items */
+            items: components["schemas"]["PositionItem"][];
+        };
         /** PortfolioResponse */
         PortfolioResponse: {
             /** Id */
@@ -929,6 +1140,60 @@ export interface components {
             base_currency: string;
             /** Created At */
             created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /**
+             * Total Value
+             * @default 0
+             */
+            total_value: number;
+            /**
+             * Total Cost Basis
+             * @default 0
+             */
+            total_cost_basis: number;
+            /**
+             * Unrealized Pnl
+             * @default 0
+             */
+            unrealized_pnl: number;
+            /**
+             * Realized Pnl
+             * @default 0
+             */
+            realized_pnl: number;
+            /**
+             * Positions Count
+             * @default 0
+             */
+            positions_count: number;
+        };
+        /** PositionItem */
+        PositionItem: {
+            /** Instrument Id */
+            instrument_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Asset Class */
+            asset_class: string;
+            /** Quantity */
+            quantity: number;
+            /** Avg Price */
+            avg_price: number;
+            /** Current Price */
+            current_price: number;
+            /** Market Value */
+            market_value: number;
+            /** Cost Basis */
+            cost_basis: number;
+            /** Unrealized Pnl */
+            unrealized_pnl: number;
+            /** Unrealized Pnl Pct */
+            unrealized_pnl_pct: number;
+            /** Realized Pnl */
+            realized_pnl: number;
+            /** Weight */
+            weight: number;
         };
         /** PredictionResponse */
         PredictionResponse: {
@@ -1023,6 +1288,42 @@ export interface components {
             /** Rows Rejected */
             rows_rejected: number;
         };
+        /** RegimeHistoryPoint */
+        RegimeHistoryPoint: {
+            /** T */
+            t: string;
+            /** Regime */
+            regime: string;
+            /** Probabilities */
+            probabilities: {
+                [key: string]: number;
+            };
+        };
+        /** RegimeResponse */
+        RegimeResponse: {
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Regime */
+            regime: string;
+            /** Probabilities */
+            probabilities: {
+                [key: string]: number;
+            };
+            /** As Of */
+            as_of?: string | null;
+            /**
+             * Method
+             * @default causal_gaussian_hmm_3state
+             */
+            method: string;
+            /**
+             * History
+             * @default []
+             */
+            history: components["schemas"]["RegimeHistoryPoint"][];
+        };
         /** RegisterRequest */
         RegisterRequest: {
             /**
@@ -1037,6 +1338,10 @@ export interface components {
         };
         /** RiskSnapshotResponse */
         RiskSnapshotResponse: {
+            /** Portfolio Id */
+            portfolio_id?: string | null;
+            /** As Of */
+            as_of?: string | null;
             /** Var 95 */
             var_95: number;
             /** Cvar 95 */
@@ -1051,6 +1356,20 @@ export interface components {
             annual_volatility: number;
             /** Risk Level */
             risk_level: string;
+            /** Weights */
+            weights?: {
+                [key: string]: number;
+            };
+            /**
+             * Observations
+             * @default 0
+             */
+            observations: number;
+            /**
+             * Method
+             * @default historical_1d_90d
+             */
+            method: string;
         };
         /** RunInferenceRequest */
         RunInferenceRequest: {
@@ -1061,6 +1380,36 @@ export interface components {
              * @default 1h
              */
             timeframe: string;
+        };
+        /** TransactionResponse */
+        TransactionResponse: {
+            /** Id */
+            id: string;
+            /** Portfolio Id */
+            portfolio_id: string;
+            /** Instrument Id */
+            instrument_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Side */
+            side: string;
+            /** Quantity */
+            quantity: number;
+            /** Price */
+            price: number;
+            /** Fee */
+            fee: number;
+            /** Executed At */
+            executed_at: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** UpdatePortfolioRequest */
+        UpdatePortfolioRequest: {
+            /** Name */
+            name?: string | null;
+            /** Base Currency */
+            base_currency?: string | null;
         };
         /** UserResponse */
         UserResponse: {
@@ -1406,6 +1755,40 @@ export interface operations {
             };
         };
     };
+    get_instrument_regime_api_v1_instruments__id__regime_get: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+                days?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegimeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_candles_api_v1_instruments__id__candles_get: {
         parameters: {
             query?: {
@@ -1678,7 +2061,7 @@ export interface operations {
             };
         };
     };
-    get_portfolio_risk_api_v1_portfolios__id__risk_get: {
+    get_portfolio_api_v1_portfolios__id__get: {
         parameters: {
             query?: never;
             header?: {
@@ -1697,7 +2080,320 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["PortfolioResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_portfolio_api_v1_portfolios__id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_portfolio_api_v1_portfolios__id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePortfolioRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_positions_api_v1_portfolios__id__positions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioPositionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_portfolio_transactions_api_v1_portfolios__id__transactions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_portfolio_transaction_api_v1_portfolios__id__transactions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTransactionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_portfolio_transaction_api_v1_portfolios__id__transactions__tx_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_risk_api_v1_portfolios__id__risk_get: {
+        parameters: {
+            query?: {
+                window?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["RiskSnapshotResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_pnl_api_v1_portfolios__id__pnl_get: {
+        parameters: {
+            query?: {
+                period?: string;
+                group_by?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioPnlResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_portfolio_correlation_api_v1_portfolios__id__correlation_get: {
+        parameters: {
+            query?: {
+                window?: string;
+                timeframe?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrelationResponse"];
                 };
             };
             /** @description Validation Error */
