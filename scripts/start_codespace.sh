@@ -3,21 +3,27 @@ set -euo pipefail
 
 [ -f .env ] || cp .env.example .env
 
+export PATH="$HOME/.local/bin:$PATH"
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: 'docker' is not available (Codespace is still in recovery mode)."
   echo "Run: Cmd/Ctrl + Shift + P -> 'Codespaces: Rebuild Container' (or 'Full Rebuild'), then re-run this script."
   exit 1
 fi
 
+if ! dpkg -s libgomp1 >/dev/null 2>&1; then
+  echo "[0/5] Installing libgomp1 (for LightGBM)..."
+  sudo apt-get update && sudo apt-get install -y --no-install-recommends libgomp1
+fi
+
 if ! command -v uv >/dev/null 2>&1; then
   echo "[0/5] Installing uv..."
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  export PATH="$HOME/.local/bin:$PATH"
 fi
 
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "[0/5] Installing pnpm@10..."
-  npm install -g pnpm@10
+  npm install -g pnpm@10 || sudo npm install -g pnpm@10
 fi
 
 echo "[1/5] Syncing Python & Node dependencies (if needed)..."
