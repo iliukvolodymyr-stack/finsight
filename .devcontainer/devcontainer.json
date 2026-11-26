@@ -1,0 +1,21 @@
+{
+  "name": "FinSight AI",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "forwardPorts": [5173, 8000],
+  "portsAttributes": {
+    "5173": {
+      "label": "FinSight UI (Vite)",
+      "onAutoForward": "openBrowser"
+    },
+    "8000": {
+      "label": "FinSight API (FastAPI)"
+    }
+  },
+  "postCreateCommand": "pip install --no-cache-dir uv && npm install -g pnpm@10 && ([ -f .env ] || cp .env.example .env) && uv sync --all-packages --group dev && pnpm install --frozen-lockfile"
+}
