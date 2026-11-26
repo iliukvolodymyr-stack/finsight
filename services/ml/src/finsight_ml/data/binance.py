@@ -5,9 +5,10 @@ from typing import Any
 import httpx
 from finsight_core.config import get_settings
 
-from finsight_ml.data.types import RawCandle
+from finsight_ml.data.types import FundingRateRecord, RawCandle
 
 BINANCE_MAX_LIMIT = 1000
+BINANCE_FUTURES_REST = "https://fapi.binance.com"
 
 
 def _retry_delay(resp: httpx.Response, default_sec: float) -> float:
@@ -138,3 +139,109 @@ async def fetch_binance_klines(
             await http.aclose()
 
     return all_candles
+
+
+def parse_binance_funding_rates(payload: list[dict[str, Any]]) -> list[FundingRateRecord]:
+    """
+    Parse Binance Futures `/fapi/v1/fundingRate` JSON array into FundingRateRecord objects.
+    Each entry carries `fundingTime` (ms UTC), `fundingRate`, and optional `markPrice`.
+    """
+    records: list[FundingRateRecord] = []
+    for row in payload:
+        if "fundingTime" not in row or "fundingRate" not in row:
+            continue
+        ts_ms = int(row["fundingTime"])
+        mark_raw = row.get("markPrice")
+        mark_price: float | None = None
+        if mark_raw not in (None, "", "0"):
+            try:
+                val = float(mark_raw)
+                if val > 0.0:
+                    mark_price = val
+            except (TypeError, ValueError):
+                mark_price = None
+
+        records.append(
+            FundingRateRecord(
+                funding_time=datetime.fromtimestamp(ts_ms / 1000.0, tz=UTC),
+                funding_rate=float(row["fundingRate"]),
+                mark_price=mark_price,
+            )
+        )
+    return records
+
+
+async def fetch_binance_funding_rates(
+    symbol: str,
+    start: datetime,
+    end: datetime,
+    *,
+    base_url: str | None = None,
+    max_retries: int = 3,
+    client: httpx.AsyncClient | None = None,
+) -> list[FundingRateRecord]:
+    """
+    Fetch historical perpetual funding settlements from Binance Futures REST API
+    with automatic 1000-record pagination and exponential backoff.
+    """
+    if start.tzinfo is None or end.tzinfo is None:
+        raise ValueError("start and end must be timezone-aware UTC datetimes")
+    if max_retries < 1:
+        raise ValueError("max_retries must be >= 1")
+
+    api_base = (base_url or BINANCE_FUTURES_REST).rstrip("/")
+    url = f"{api_base}/fapi/v1/fundingRate"
+
+    start_ms = int(start.astimezone(UTC).timestamp() * 1000)
+    end_ms = int(end.astimezone(UTC).timestamp() * 1000)
+
+    all_records: list[FundingRateRecord] = []
+    owns_client = client is None
+    http = client or httpx.AsyncClient(timeout=20.0)
+
+    try:
+        cursor_ms = start_ms
+        while cursor_ms <= end_ms:
+            params: dict[str, str | int] = {
+                "symbol": symbol.upper(),
+                "startTime": cursor_ms,
+                "endTime": end_ms,
+                "limit": BINANCE_MAX_LIMIT,
+            }
+
+            payload: list[dict[str, Any]] | None = None
+            for attempt in range(max_retries):
+                try:
+                    resp = await http.get(url, params=params)
+                except httpx.TransportError:
+                    if attempt == max_retries - 1:
+                        raise
+                    await asyncio.sleep(min(1.0 * (2**attempt), 10.0))
+                    continue
+
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    if attempt == max_retries - 1:
+                        resp.raise_for_status()
+                    await asyncio.sleep(_retry_delay(resp, 1.0 * (2**attempt)))
+                    continue
+                resp.raise_for_status()
+                payload = resp.json()
+                break
+
+            if not payload:
+                break
+
+            batch = parse_binance_funding_rates(payload)
+            all_records.extend(batch)
+
+            last_ms = int(payload[-1]["fundingTime"])
+            if len(payload) < BINANCE_MAX_LIMIT or last_ms <= cursor_ms:
+                break
+
+            cursor_ms = last_ms + 1
+            await asyncio.sleep(0.05)
+    finally:
+        if owns_client:
+            await http.aclose()
+
+    return all_records

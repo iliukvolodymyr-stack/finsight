@@ -19,6 +19,15 @@ class RawCandle:
     source: str = "binance"
 
 
+@dataclass(frozen=True)
+class FundingRateRecord:
+    """Normalized Binance Futures perpetual funding settlement record (UTC)."""
+
+    funding_time: datetime
+    funding_rate: float
+    mark_price: float | None = None
+
+
 @dataclass
 class ValidationResult:
     """Outcome of data-gate checks; bad bars are counted and never dropped silently."""

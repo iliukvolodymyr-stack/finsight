@@ -8,14 +8,18 @@ import pandas as pd
 def periods_per_year_for(exchange: str = "binance", timeframe: str = "1h") -> int:
     """
     Exchange- and timeframe-aware annualization factor:
-    - Crypto (24/7): 8760 (1h), 365 (1d)
+    - Crypto (24/7): 8760 (1h), 2190 (4h), 365 (1d)
     - NYSE (252 sessions * 7 hourly bars): 1764 (1h), 252 (1d)
     """
     ex = exchange.lower()
     tf = timeframe.lower()
     if ex in {"nyse", "nasdaq", "xnys"}:
         return 1764 if tf == "1h" else 252
-    return 8760 if tf == "1h" else 365
+    if tf == "1h":
+        return 8760
+    if tf == "4h":
+        return 2190
+    return 365
 
 
 def calculate_sharpe_ratio(

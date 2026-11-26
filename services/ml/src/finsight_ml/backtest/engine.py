@@ -157,6 +157,7 @@ class BacktestEngine:
         volatility: pd.Series | None = None,
         min_barrier_pct: float = 0.003,
         position_size: float = 1.0,
+        position_sizes: pd.Series | None = None,
         allow_short: bool = False,
         initial_capital: float = 10000.0,
         exchange: str = "binance",
@@ -199,6 +200,15 @@ class BacktestEngine:
         conf_arr = (
             confidence.reindex(df.index).to_numpy(dtype=np.float64)
             if confidence is not None
+            else None
+        )
+        size_arr = (
+            np.clip(
+                position_sizes.reindex(df.index).fillna(position_size).to_numpy(dtype=np.float64),
+                0.01,
+                1.0,
+            )
+            if position_sizes is not None
             else None
         )
         fold_arr = fold_map.reindex(df.index).to_numpy() if fold_map is not None else None
@@ -302,7 +312,10 @@ class BacktestEngine:
                             conservative_side=pos_side,
                         )
 
-                        notional = capital * float(position_size)
+                        bar_size = (
+                            float(size_arr[j]) if size_arr is not None else float(position_size)
+                        )
+                        notional = capital * bar_size
                         pos_qty = notional / entry_price
                         pos_entry_fee = notional * self.total_cost_pct
                         total_traded_notional += notional
