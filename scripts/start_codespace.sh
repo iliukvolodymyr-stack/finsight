@@ -3,10 +3,32 @@ set -euo pipefail
 
 [ -f .env ] || cp .env.example .env
 
-echo "[1/5] Starting PostgreSQL (TimescaleDB) + Redis in Docker..."
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERROR: 'docker' is not available (Codespace is still in recovery mode)."
+  echo "Run: Cmd/Ctrl + Shift + P -> 'Codespaces: Rebuild Container' (or 'Full Rebuild'), then re-run this script."
+  exit 1
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "[0/5] Installing uv..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "[0/5] Installing pnpm@10..."
+  npm install -g pnpm@10
+fi
+
+echo "[1/5] Syncing Python & Node dependencies (if needed)..."
+uv python install 3.12
+uv sync --all-packages --group dev
+pnpm install --frozen-lockfile
+
+echo "[2/5] Starting PostgreSQL (TimescaleDB) + Redis in Docker..."
 docker compose -f infra/compose/docker-compose.dev.yml up -d postgres redis
 
-echo "[2/5] Waiting for Postgres to become ready..."
+echo "[3/5] Waiting for Postgres to become ready..."
 for _ in $(seq 1 30); do
   if docker compose -f infra/compose/docker-compose.dev.yml exec -T postgres pg_isready -U finsight -d finsight >/dev/null 2>&1; then
     break
@@ -14,11 +36,9 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-echo "[3/5] Running Alembic migrations and seeding demo instruments/portfolios..."
+echo "[4/5] Running Alembic migrations, seeding, backfill, and initial training..."
 (cd services/api && uv run alembic upgrade head)
 uv run python scripts/seed.py
-
-echo "[4/5] Backfilling 2y OHLCV market data + training initial coursework models (if needed)..."
 uv run python scripts/backfill.py
 uv run python scripts/train_models.py
 
