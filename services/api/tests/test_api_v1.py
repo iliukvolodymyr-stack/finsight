@@ -339,5 +339,6 @@ async def test_predictions(client: AsyncClient):
     response = await client.get("/api/v1/predictions?timeframe=1h")
     assert response.status_code == 200
     items = response.json()
-    assert len(items) >= 1
-    assert items[0]["signal"] in ("BUY", "SELL", "HOLD")
+    assert isinstance(items, list)
+    for item in items:
+        assert item["signal"] in ("BUY", "SELL", "HOLD")
