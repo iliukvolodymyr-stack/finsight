@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@finsight/api-client";
-import { apiClient } from "@/lib/api";
+import {
+  CURRENT_API_BASE_URL,
+  apiClient,
+  getStoredApiBaseUrl,
+  setStoredApiBaseUrl,
+} from "@/lib/api";
 import { formatCurrency, formatDateTime, formatNumber } from "@finsight/shared";
 import {
   MarketChart,
@@ -18,6 +23,7 @@ import {
   Clock,
   FlaskConical,
   RefreshCw,
+  Settings2,
   ShieldCheck,
   TrendingDown,
   TrendingUp,
@@ -54,6 +60,10 @@ export default function App() {
     macd: false,
   });
   const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
+  const [apiModalOpen, setApiModalOpen] = useState(false);
+  const [apiUrlInput, setApiUrlInput] = useState(
+    () => getStoredApiBaseUrl() ?? CURRENT_API_BASE_URL
+  );
 
   const healthQuery = useQuery({
     queryKey: ["health"],
@@ -267,22 +277,77 @@ export default function App() {
             </button>
           </nav>
 
-          <div className="flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                healthQuery.data?.status === "ok"
-                  ? "bg-emerald-400 animate-pulse"
-                  : "bg-amber-400"
-              }`}
-            />
-            <span className="text-slate-300">
-              API:{" "}
-              {healthQuery.isLoading
-                ? "перевірка..."
-                : healthQuery.data?.status === "ok"
-                  ? "онлайн"
-                  : "офлайн"}
-            </span>
+          <div className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setApiModalOpen((prev) => !prev)}
+              title={`Налаштувати сервер API (${CURRENT_API_BASE_URL})`}
+              className="flex items-center space-x-2 text-xs bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 transition-colors"
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  healthQuery.data?.status === "ok"
+                    ? "bg-emerald-400 animate-pulse"
+                    : "bg-amber-400"
+                }`}
+              />
+              <span className="text-slate-300">
+                API:{" "}
+                {healthQuery.isLoading
+                  ? "перевірка..."
+                  : healthQuery.data?.status === "ok"
+                    ? "онлайн"
+                    : "офлайн"}
+              </span>
+              <Settings2 className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+
+            {apiModalOpen && (
+              <div className="absolute right-0 top-11 z-50 w-80 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-200">Адреса сервера API</span>
+                  <button
+                    type="button"
+                    onClick={() => setApiModalOpen(false)}
+                    className="text-slate-400 hover:text-slate-200"
+                  >
+                    Закрити
+                  </button>
+                </div>
+                <input
+                  type="url"
+                  value={apiUrlInput}
+                  onChange={(e) => setApiUrlInput(e.target.value)}
+                  placeholder="https://...-8000.app.github.dev або http://localhost:8000"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Для локального Docker залиште <code className="text-slate-300">http://localhost:8000</code>. Для Codespaces вкажіть Public URL порту <code className="text-slate-300">8000</code>.
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStoredApiBaseUrl("");
+                      window.location.reload();
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800"
+                  >
+                    Скинути
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStoredApiBaseUrl(apiUrlInput);
+                      window.location.reload();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+                  >
+                    Зберегти та підключити
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -310,9 +375,20 @@ export default function App() {
               {instrumentsQuery.isLoading ? (
                 <div className="text-xs text-slate-500">Завантаження активів...</div>
               ) : instrumentsQuery.isError ? (
-                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>Немає зв&apos;язку з API. Перевірте бекенд на порту 8000.</span>
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Немає зв&apos;язку з API ({CURRENT_API_BASE_URL}).
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setApiModalOpen(true)}
+                    className="w-full py-1.5 px-2 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-medium transition-colors"
+                  >
+                    Вказати URL сервера API
+                  </button>
                 </div>
               ) : (
                 instrumentsQuery.data?.map((inst) => (
