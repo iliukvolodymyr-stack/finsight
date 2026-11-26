@@ -1,6 +1,6 @@
 """sprint c3 portfolios, transactions, risk snapshots, and market regimes tables
 
-Revision ID: 0004_sprint_c3_portfolios_and_risk
+Revision ID: 0004_sprint_c3_portfolios
 Revises: 0003_sprint_c2_ml_and_backtests
 Create Date: 2026-11-26 13:25:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0004_sprint_c3_portfolios_and_risk"
+revision: str = "0004_sprint_c3_portfolios"
 down_revision: str | None = "0003_sprint_c2_ml_and_backtests"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

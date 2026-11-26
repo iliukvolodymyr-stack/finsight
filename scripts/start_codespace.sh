@@ -45,10 +45,11 @@ done
 echo "[4/5] Running Alembic migrations, seeding, backfill, and initial training..."
 (cd services/api && uv run alembic upgrade head)
 uv run python scripts/seed.py
-uv run python scripts/backfill.py
-uv run python scripts/train_models.py
+uv run python scripts/backfill.py || echo "WARN: backfill failed (external API limit/block); continuing..."
+uv run python scripts/train_models.py || echo "WARN: initial training failed; continuing..."
 
 echo "[5/5] Starting FastAPI (:8000) and Vite Desktop UI (:5173)..."
+echo "      Open ONLY port 5173 (FinSight UI) in the 'Ports' tab — do NOT open 5433 (Postgres)."
 (cd services/api && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000) &
 API_PID=$!
 trap 'kill $API_PID 2>/dev/null || true' EXIT

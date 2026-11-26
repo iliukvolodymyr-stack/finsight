@@ -14,7 +14,16 @@
       "onAutoForward": "openBrowser"
     },
     "8000": {
-      "label": "FinSight API (FastAPI)"
+      "label": "FinSight API (FastAPI)",
+      "onAutoForward": "silent"
+    },
+    "5433": {
+      "label": "PostgreSQL (internal DB)",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis (internal cache)",
+      "onAutoForward": "silent"
     }
   }
 }
