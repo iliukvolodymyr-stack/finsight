@@ -33,22 +33,36 @@ def _make_hourly_market(n: int = 12000, seed: int = 101) -> pd.DataFrame:
     )
 
 
-def test_calibrator_platt_and_isotonic_and_conformal() -> None:
+def test_calibrator_temperature_platt_and_isotonic_and_conformal() -> None:
     rng = np.random.default_rng(7)
-    # Small val (<1000) -> Platt
+    # Default Temperature Scaling preserves argmax & optimizes val NLL
+    raw_temp = rng.dirichlet([3.0, 3.0, 3.0], size=400)
+    y_temp = rng.choice([-1, 0, 1], size=400, p=[0.3, 0.4, 0.3])
+    cal_temp = ProbabilityCalibrator().fit(raw_temp, y_temp)
+    assert cal_temp.method == "temperature"
+    p_temp = cal_temp.transform(raw_temp)
+    assert p_temp.shape == (400, 3)
+    np.testing.assert_allclose(p_temp.sum(axis=1), 1.0, atol=1e-9)
+    assert np.array_equal(np.argmax(p_temp, axis=1), np.argmax(raw_temp, axis=1))
+
+    # Small val (<1000) with method="auto" -> Platt
     raw_small = rng.dirichlet([2.0, 3.0, 2.0], size=300)
     y_small = rng.choice([-1, 0, 1], size=300, p=[0.3, 0.4, 0.3])
-    cal_platt = ProbabilityCalibrator(isotonic_min_samples=1000).fit(raw_small, y_small)
+    cal_platt = ProbabilityCalibrator(method="auto", isotonic_min_samples=1000).fit(
+        raw_small, y_small
+    )
     assert cal_platt.method == "platt"
     p_platt = cal_platt.transform(raw_small)
     assert p_platt.shape == (300, 3)
     np.testing.assert_allclose(p_platt.sum(axis=1), 1.0, atol=1e-9)
     assert (p_platt >= 0.0).all()
 
-    # Large val (>=1000) -> Isotonic
+    # Large val (>=1000) with method="auto" -> Isotonic
     raw_large = rng.dirichlet([2.0, 3.0, 2.0], size=1200)
     y_large = rng.choice([-1, 0, 1], size=1200, p=[0.3, 0.4, 0.3])
-    cal_iso = ProbabilityCalibrator(isotonic_min_samples=1000).fit(raw_large, y_large)
+    cal_iso = ProbabilityCalibrator(method="auto", isotonic_min_samples=1000).fit(
+        raw_large, y_large
+    )
     assert cal_iso.method == "isotonic"
     p_iso = cal_iso.transform(raw_large)
     np.testing.assert_allclose(p_iso.sum(axis=1), 1.0, atol=1e-9)
@@ -158,5 +172,5 @@ def test_end_to_end_training_pipeline_and_artifacts(tmp_path: Path) -> None:
     loaded_cal = ProbabilityCalibrator.load(res.artifact_dir / "calibrator.joblib")
     loaded_conf = VolatilityNormalizedConformal.load(res.artifact_dir / "conformal.json")
     assert loaded_conf.horizon_bars == 24
-    assert loaded_cal.method in {"platt", "isotonic"}
+    assert loaded_cal.method in {"temperature", "platt", "isotonic"}
     assert len(loaded_model.feature_names) == 32
