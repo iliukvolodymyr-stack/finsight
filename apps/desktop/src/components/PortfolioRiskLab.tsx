@@ -61,6 +61,15 @@ export function PortfolioRiskLab() {
   const [txPrice, setTxPrice] = useState("90000");
   const [txFee, setTxFee] = useState("9.0");
   const [txError, setTxError] = useState<string | null>(null);
+  const [portError, setPortError] = useState<string | null>(null);
+
+  const instrumentsQuery = useQuery({
+    queryKey: ["instruments"],
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/instruments");
+      return res.data ?? [];
+    },
+  });
 
   const portfoliosQuery = useQuery({
     queryKey: ["portfolios"],
@@ -136,12 +145,18 @@ export function PortfolioRiskLab() {
       return res.data;
     },
     onSuccess: async (data) => {
+      setPortError(null);
       setNewPortName("");
       setShowNewPort(false);
       if (data) {
         setSelectedPortId(data.id);
         await invalidatePortfolio(data.id);
       }
+    },
+    onError: (err) => {
+      setPortError(
+        err instanceof ApiError || err instanceof Error ? err.message : "Не вдалося створити портфель"
+      );
     },
   });
 
@@ -189,9 +204,22 @@ export function PortfolioRiskLab() {
       setTxError(null);
       await invalidatePortfolio(activePortId);
     },
+    onError: (err) => {
+      setTxError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Не вдалося сторнувати транзакцію"
+      );
+    },
   });
 
   const portfolios = portfoliosQuery.data ?? [];
+  const activePortfolio = portfolios.find((p) => p.id === activePortId);
+  const displayCurrency = activePortfolio?.base_currency || "USD";
+  const instrumentOptions =
+    instrumentsQuery.data && instrumentsQuery.data.length > 0
+      ? instrumentsQuery.data.map((i) => i.symbol)
+      : ["BTCUSDT", "ETHUSDT", "SPY"];
   const positions = positionsQuery.data?.items ?? [];
   const valSummary = positionsQuery.data;
   const risk = riskQuery.data;
@@ -218,21 +246,28 @@ export function PortfolioRiskLab() {
           </div>
 
           {showNewPort && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Назва портфеля..."
-                value={newPortName}
-                onChange={(e) => setNewPortName(e.target.value)}
-                className="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200"
-              />
-              <button
-                onClick={() => newPortName.trim() && createPortfolioMutation.mutate(newPortName)}
-                disabled={createPortfolioMutation.isPending || !newPortName.trim()}
-                className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white"
-              >
-                OK
-              </button>
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Назва портфеля..."
+                  value={newPortName}
+                  onChange={(e) => setNewPortName(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200"
+                />
+                <button
+                  onClick={() => newPortName.trim() && createPortfolioMutation.mutate(newPortName)}
+                  disabled={createPortfolioMutation.isPending || !newPortName.trim()}
+                  className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white"
+                >
+                  OK
+                </button>
+              </div>
+              {portError && (
+                <div className="p-2 rounded bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-300">
+                  {portError}
+                </div>
+              )}
             </div>
           )}
 
@@ -270,11 +305,11 @@ export function PortfolioRiskLab() {
                     </div>
                     <div className="flex justify-between font-mono text-[11px] mt-1">
                       <span className="text-slate-200">
-                        {formatCurrency(p.total_value, "USD", "en-US")}
+                        {formatCurrency(p.total_value, p.base_currency || "USD", "en-US")}
                       </span>
                       <span className={posPnl ? "text-emerald-400" : "text-rose-400"}>
                         {posPnl ? "+" : ""}
-                        {formatCurrency(p.unrealized_pnl, "USD", "en-US")}
+                        {formatCurrency(p.unrealized_pnl, p.base_currency || "USD", "en-US")}
                       </span>
                     </div>
                   </button>
@@ -299,9 +334,11 @@ export function PortfolioRiskLab() {
                   onChange={(e) => setTxSymbol(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
                 >
-                  <option value="BTCUSDT">BTCUSDT</option>
-                  <option value="ETHUSDT">ETHUSDT</option>
-                  <option value="SPY">SPY</option>
+                  {instrumentOptions.map((sym) => (
+                    <option key={sym} value={sym}>
+                      {sym}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="space-y-1">
@@ -410,7 +447,9 @@ export function PortfolioRiskLab() {
             <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
               <div className="text-slate-500">Вартість (NAV)</div>
               <div className="font-mono font-bold text-sm text-white mt-1">
-                {valSummary ? formatCurrency(valSummary.total_market_value, "USD", "en-US") : "—"}
+                {valSummary
+                  ? formatCurrency(valSummary.total_market_value, displayCurrency, "en-US")
+                  : "—"}
               </div>
             </div>
             <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
@@ -423,7 +462,7 @@ export function PortfolioRiskLab() {
                 }`}
               >
                 {valSummary
-                  ? formatCurrency(valSummary.total_unrealized_pnl, "USD", "en-US")
+                  ? formatCurrency(valSummary.total_unrealized_pnl, displayCurrency, "en-US")
                   : "—"}
               </div>
             </div>
@@ -537,7 +576,8 @@ export function PortfolioRiskLab() {
                       <div className="flex justify-between font-mono">
                         <span className="text-slate-200 font-semibold">{pos.symbol}</span>
                         <span className="text-slate-300">
-                          {pct.toFixed(1)}% · {formatCurrency(pos.market_value, "USD", "en-US")}
+                          {pct.toFixed(1)}% ·{" "}
+                          {formatCurrency(pos.market_value, displayCurrency, "en-US")}
                         </span>
                       </div>
                       <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -586,13 +626,13 @@ export function PortfolioRiskLab() {
                         </td>
                         <td className="py-2 px-2 text-right">{pos.quantity}</td>
                         <td className="py-2 px-2 text-right">
-                          {formatCurrency(pos.avg_price, "USD", "en-US")}
+                          {formatCurrency(pos.avg_price, displayCurrency, "en-US")}
                         </td>
                         <td className="py-2 px-2 text-right">
-                          {formatCurrency(pos.current_price, "USD", "en-US")}
+                          {formatCurrency(pos.current_price, displayCurrency, "en-US")}
                         </td>
                         <td className="py-2 px-2 text-right">
-                          {formatCurrency(pos.market_value, "USD", "en-US")}
+                          {formatCurrency(pos.market_value, displayCurrency, "en-US")}
                         </td>
                         <td
                           className={`py-2 pl-2 text-right font-semibold ${
@@ -606,7 +646,7 @@ export function PortfolioRiskLab() {
                               <TrendingDown className="w-3 h-3" />
                             )}
                             {up ? "+" : ""}
-                            {formatCurrency(pos.unrealized_pnl, "USD", "en-US")} (
+                            {formatCurrency(pos.unrealized_pnl, displayCurrency, "en-US")} (
                             {(pos.unrealized_pnl_pct * 100).toFixed(2)}%)
                           </span>
                         </td>
@@ -654,10 +694,10 @@ export function PortfolioRiskLab() {
                       </td>
                       <td className="py-1.5 px-2 text-right">{t.quantity}</td>
                       <td className="py-1.5 px-2 text-right">
-                        {formatCurrency(t.price, "USD", "en-US")}
+                        {formatCurrency(t.price, displayCurrency, "en-US")}
                       </td>
                       <td className="py-1.5 px-2 text-right">
-                        {formatCurrency(t.fee, "USD", "en-US")}
+                        {formatCurrency(t.fee, displayCurrency, "en-US")}
                       </td>
                       <td className="py-1.5 pl-2 text-right">
                         <button

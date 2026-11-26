@@ -225,7 +225,15 @@ async def update_portfolio(
     if req.name is not None:
         port.name = req.name.strip()
     if req.base_currency is not None:
-        port.base_currency = req.base_currency.upper().strip()
+        currency = req.base_currency.upper().strip()
+        if currency != "USD":
+            raise AppException(
+                status_code=422,
+                code="UNSUPPORTED_CURRENCY",
+                title="Unsupported base currency",
+                detail="Currently only 'USD' base currency is supported (no FX rate conversion yet).",
+            )
+        port.base_currency = currency
     port.updated_at = datetime.now(UTC)
     await session.commit()
     return await get_portfolio(id=id, current_user=current_user, session=session)

@@ -48,6 +48,12 @@ def _needs_crypto_poll(latest_ts: datetime | None, timeframe: str, now_utc: date
     if timeframe == "1h":
         expected_closed = now_utc.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
         return latest_utc < expected_closed
+    if timeframe == "4h":
+        bucket_hour = (now_utc.hour // 4) * 4
+        expected_closed = now_utc.replace(
+            hour=bucket_hour, minute=0, second=0, microsecond=0
+        ) - timedelta(hours=4)
+        return latest_utc < expected_closed
     if timeframe == "1d":
         expected_closed = now_utc.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
             days=1

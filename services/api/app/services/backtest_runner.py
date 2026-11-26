@@ -96,7 +96,7 @@ async def execute_backtest_job(
         slippage_bps = float(cfg_dict.get("slippage_bps", 5.0))
 
         warmup_bars = 1600 if bt.mode == "static_model" else 0
-        bar_hours = 1 if timeframe == "1h" else 24
+        bar_hours = {"15m": 0.25, "1h": 1.0, "4h": 4.0, "1d": 24.0}.get(timeframe, 24.0)
         fetch_from = bt.period_start - timedelta(hours=warmup_bars * bar_hours)
 
         rows = (

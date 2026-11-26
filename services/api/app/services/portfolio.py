@@ -1,3 +1,4 @@
+import math
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -81,20 +82,58 @@ async def _latest_market_prices(
     session: AsyncSession,
     instrument_ids: list[uuid.UUID],
 ) -> dict[str, float]:
+    if not instrument_ids:
+        return {}
+
+    cutoff = datetime.now(UTC) - timedelta(days=30)
+    rows = (
+        await session.execute(
+            select(
+                CandleModel.instrument_id,
+                CandleModel.timeframe,
+                CandleModel.open_time,
+                CandleModel.close,
+            )
+            .where(
+                CandleModel.instrument_id.in_(instrument_ids),
+                CandleModel.timeframe.in_(["1h", "1d"]),
+                CandleModel.is_closed.is_(True),
+                CandleModel.open_time >= cutoff,
+            )
+            .order_by(desc(CandleModel.open_time))
+        )
+    ).all()
+
+    best_ts: dict[str, tuple[datetime, int]] = {}
     prices: dict[str, float] = {}
-    for iid in instrument_ids:
+    tf_prio = {"1h": 2, "1d": 1}
+    for iid, tf, open_ts, close_val in rows:
+        price = float(close_val)
+        if not math.isfinite(price) or price <= 0.0:
+            continue
+        key = str(iid)
+        prio = tf_prio.get(str(tf), 0)
+        cur = (open_ts, prio)
+        if key not in best_ts or cur > best_ts[key]:
+            best_ts[key] = cur
+            prices[key] = price
+
+    # Fallback without 30-day cutoff if an inactive instrument only has older historical bars
+    missing = [iid for iid in instrument_ids if str(iid) not in prices]
+    for iid in missing:
         row = (
             await session.execute(
                 select(CandleModel.close)
                 .where(
                     CandleModel.instrument_id == iid,
+                    CandleModel.timeframe.in_(["1h", "1d"]),
                     CandleModel.is_closed.is_(True),
                 )
                 .order_by(desc(CandleModel.open_time))
                 .limit(1)
             )
         ).first()
-        if row is not None:
+        if row is not None and float(row[0]) > 0.0:
             prices[str(iid)] = float(row[0])
     return prices
 
@@ -162,12 +201,20 @@ async def create_portfolio_record(
     name: str,
     base_currency: str = "USD",
 ) -> PortfolioModel:
+    currency = base_currency.upper().strip()
+    if currency != "USD":
+        raise AppException(
+            status_code=422,
+            code="UNSUPPORTED_CURRENCY",
+            title="Unsupported base currency",
+            detail="Currently only 'USD' base currency is supported (no FX rate conversion yet).",
+        )
     now = datetime.now(UTC)
     port = PortfolioModel(
         id=new_uuid7(),
         user_id=user_id,
         name=name.strip(),
-        base_currency=base_currency.upper().strip(),
+        base_currency=currency,
         created_at=now,
         updated_at=now,
     )

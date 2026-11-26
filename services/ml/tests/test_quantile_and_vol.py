@@ -83,8 +83,12 @@ def test_forward_volatility_target_and_regressor() -> None:
         index=df.index,
     )
     vol_m = VolatilityLGBMForecaster(n_estimators=25, min_child_samples=10).fit(
-        X.iloc[:300], rv_fwd.iloc[:300]
+        X.iloc[:300],
+        rv_fwd.iloc[:300],
+        eval_set=(X.iloc[300:350], rv_fwd.iloc[300:350]),
+        early_stopping_rounds=5,
     )
+    assert int(getattr(vol_m.model, "best_iteration_", 0) or 0) > 0
     preds = vol_m.predict_sigma(X.iloc[300:350])
     assert len(preds) == 50
     assert np.all(preds > 0.0)

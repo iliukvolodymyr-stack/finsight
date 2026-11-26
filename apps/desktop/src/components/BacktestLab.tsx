@@ -107,7 +107,20 @@ export function BacktestLab() {
   const [allowShort, setAllowShort] = useState(false);
   const [selectedBtId, setSelectedBtId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [launchingBtId, setLaunchingBtId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const instrumentsQuery = useQuery({
+    queryKey: ["instruments"],
+    queryFn: async () => {
+      const res = await apiClient.GET("/api/v1/instruments");
+      return res.data ?? [];
+    },
+  });
+  const instrumentOptions =
+    instrumentsQuery.data && instrumentsQuery.data.length > 0
+      ? instrumentsQuery.data.map((i) => i.symbol)
+      : ["BTCUSDT", "ETHUSDT", "SPY"];
 
   const modelsQuery = useQuery({
     queryKey: ["models"],
@@ -148,16 +161,18 @@ export function BacktestLab() {
   useEffect(() => {
     const st = jobQuery.data?.status;
     if (st === "done" || st === "failed") {
+      const targetId = launchingBtId ?? activeBtId;
       void queryClient.invalidateQueries({ queryKey: ["backtests"] });
-      if (activeBtId) {
-        void queryClient.invalidateQueries({ queryKey: ["backtest-detail", activeBtId] });
-        void queryClient.invalidateQueries({ queryKey: ["backtest-equity", activeBtId] });
-        void queryClient.invalidateQueries({ queryKey: ["backtest-folds", activeBtId] });
-        void queryClient.invalidateQueries({ queryKey: ["backtest-trades", activeBtId] });
+      if (targetId) {
+        void queryClient.invalidateQueries({ queryKey: ["backtest-detail", targetId] });
+        void queryClient.invalidateQueries({ queryKey: ["backtest-equity", targetId] });
+        void queryClient.invalidateQueries({ queryKey: ["backtest-folds", targetId] });
+        void queryClient.invalidateQueries({ queryKey: ["backtest-trades", targetId] });
       }
+      setLaunchingBtId(null);
       setActiveJobId(null);
     }
-  }, [jobQuery.data?.status, activeBtId, queryClient]);
+  }, [jobQuery.data?.status, launchingBtId, activeBtId, queryClient]);
 
   const detailQuery = useQuery({
     queryKey: ["backtest-detail", activeBtId],
@@ -231,6 +246,7 @@ export function BacktestLab() {
       setFormError(null);
       if (data) {
         setSelectedBtId(data.backtest_id);
+        setLaunchingBtId(data.backtest_id);
         setActiveJobId(data.job_id);
         void queryClient.invalidateQueries({ queryKey: ["backtests"] });
       }
@@ -268,9 +284,11 @@ export function BacktestLab() {
                 onChange={(e) => setSymbol(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
               >
-                <option value="BTCUSDT">BTCUSDT</option>
-                <option value="ETHUSDT">ETHUSDT</option>
-                <option value="SPY">SPY (exp.)</option>
+                {instrumentOptions.map((sym) => (
+                  <option key={sym} value={sym}>
+                    {sym}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="space-y-1">

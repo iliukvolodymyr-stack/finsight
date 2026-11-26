@@ -20,7 +20,8 @@ async def compute_instrument_regime(
     Fits strictly on the initial 70% historical slice of fetched candles and emits
     strictly forward-filtered probabilities `P(s_t | x_{1:t})` over the tail window.
     """
-    fetch_limit = max(600, days * 24 + 500)
+    bars_per_day = {"1h": 24, "4h": 6, "1d": 1}.get(timeframe, 1)
+    fetch_limit = max(600, days * bars_per_day + 500)
     rows = (
         await session.execute(
             select(CandleModel.open_time, CandleModel.close)
@@ -65,7 +66,7 @@ async def compute_instrument_regime(
     hmm = CausalGaussianHMM(n_iter=30).fit(obs.iloc[:fit_end])
     filtered = hmm.filter_causal(obs)
 
-    tail_bars = min(len(obs), max(24, days * (24 if timeframe == "1h" else 1)))
+    tail_bars = min(len(obs), max(24, days * bars_per_day))
     step = max(1, tail_bars // 180)
 
     start_i = len(obs) - tail_bars
