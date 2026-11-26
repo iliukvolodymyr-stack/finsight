@@ -39,7 +39,7 @@ export interface ClientConfig {
 }
 
 export function createApiClient(config: ClientConfig = {}): Client<paths> {
-  const baseUrl = config.baseUrl || "http://localhost:8000";
+  const baseUrl = config.baseUrl ?? "http://localhost:8000";
 
   const client = createClient<paths>({
     baseUrl,

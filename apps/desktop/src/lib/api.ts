@@ -9,7 +9,7 @@ function resolveApiBaseUrl(): string {
     window.location.hostname.endsWith(".app.github.dev")
   ) {
     // Route via Vite dev proxy on the same origin inside GitHub Codespaces to avoid cross-port CORS/auth issues.
-    return "";
+    return window.location.origin;
   }
   return "http://localhost:8000";
 }
