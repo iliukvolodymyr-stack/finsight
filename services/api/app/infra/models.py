@@ -571,3 +571,172 @@ class JobModel(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PortfolioModel(Base):
+    __tablename__ = "portfolios"
+    __table_args__ = (Index("idx_portfolios_user_archived", "user_id", "archived_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    base_currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PortfolioPositionModel(Base):
+    __tablename__ = "portfolio_positions"
+    __table_args__ = (
+        PrimaryKeyConstraint("portfolio_id", "instrument_id", name="pk_portfolio_positions"),
+        CheckConstraint("quantity >= 0", name="ck_portfolio_positions_qty_nonneg"),
+        CheckConstraint("avg_price >= 0", name="ck_portfolio_positions_price_nonneg"),
+    )
+
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    quantity: Mapped[Decimal] = mapped_column(Numeric(28, 10), nullable=False)
+    avg_price: Mapped[Decimal] = mapped_column(Numeric(28, 10), nullable=False)
+    opened_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class PortfolioTransactionModel(Base):
+    __tablename__ = "portfolio_transactions"
+    __table_args__ = (
+        CheckConstraint("side IN ('BUY','SELL')", name="ck_portfolio_transactions_side"),
+        CheckConstraint("quantity > 0", name="ck_portfolio_transactions_qty_pos"),
+        CheckConstraint("price > 0", name="ck_portfolio_transactions_price_pos"),
+        CheckConstraint("fee >= 0", name="ck_portfolio_transactions_fee_nonneg"),
+        Index(
+            "idx_portfolio_transactions_port_exec",
+            "portfolio_id",
+            "executed_at",
+        ),
+        UniqueConstraint(
+            "portfolio_id",
+            "client_idempotency_key",
+            name="uq_portfolio_transactions_idempotency",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    side: Mapped[str] = mapped_column(String(10), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(28, 10), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(28, 10), nullable=False)
+    fee: Mapped[Decimal] = mapped_column(Numeric(28, 10), default=Decimal("0"), nullable=False)
+    executed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    client_idempotency_key: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+
+class RiskSnapshotModel(Base):
+    __tablename__ = "risk_snapshots"
+    __table_args__ = (
+        CheckConstraint(
+            "risk_level IN ('low','medium','high')",
+            name="ck_risk_snapshots_level",
+        ),
+        Index("idx_risk_snapshots_port_asof", "portfolio_id", "as_of"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    var_95: Mapped[float] = mapped_column(Float, nullable=False)
+    cvar_95: Mapped[float] = mapped_column(Float, nullable=False)
+    sharpe: Mapped[float] = mapped_column(Float, nullable=False)
+    sortino: Mapped[float] = mapped_column(Float, nullable=False)
+    max_drawdown: Mapped[float] = mapped_column(Float, nullable=False)
+    annual_volatility: Mapped[float] = mapped_column(Float, nullable=False)
+    risk_level: Mapped[str] = mapped_column(String(20), nullable=False)
+    weights: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    method: Mapped[str] = mapped_column(String(50), default="historical_1d_90d", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class MarketRegimeModel(Base):
+    __tablename__ = "market_regimes"
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "instrument_id",
+            "timeframe",
+            "as_of",
+            "model_version_id",
+            name="pk_market_regimes",
+        ),
+        CheckConstraint(
+            "regime IN ('bull','bear','range','high_vol')",
+            name="ck_market_regimes_regime",
+        ),
+        Index("idx_market_regimes_inst_tf_asof", "instrument_id", "timeframe", "as_of"),
+    )
+
+    instrument_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("instruments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    regime: Mapped[str] = mapped_column(String(20), nullable=False)
+    proba: Mapped[dict[str, float]] = mapped_column(JSONB, default=dict, nullable=False)
+    model_version_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("model_versions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
